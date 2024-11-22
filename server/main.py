@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Depends, Form
+from pydantic import BaseModel, Field
+from typing import Optional
 import firebirdsql
 import bcrypt
+import logging
 
 # Настройки подключения к базе данных Firebird
 DB_HOST = "localhost"
@@ -13,12 +15,15 @@ DB_PASSWORD = "masterkey"
 # Инициализация FastAPI
 app = FastAPI()
 
+# Настройка логирования
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 # Модель для приема данных от клиента
 class User(BaseModel):
     name: str
     email: str
     password: str
-    phone_number: str = None
     role: str = None
 
 class LoginRequest(BaseModel):
@@ -29,6 +34,12 @@ class AssignRoleRequest(BaseModel):
     email: str
     new_role: str
     admin_email: str
+
+class Restaurant(BaseModel):
+    name: str = Field(..., description="Название ресторана")
+    address: str = Field(..., description="Адрес ресторана")
+    city: str = Field(..., description="Город")
+    cuisine_type: str = Field(..., description="Вид кухни")
 
 def get_db_connection():
     """Функция для подключения к базе данных."""
@@ -43,7 +54,7 @@ def get_db_connection():
         )
         return conn
     except firebirdsql.Error as e:
-        print(f"Ошибка подключения к базе данных: {e}")
+        logger.error(f"Ошибка подключения к базе данных: {e}")
         raise HTTPException(status_code=500, detail="Ошибка подключения к базе данных")
 
 def hash_password(password: str) -> str:
@@ -72,7 +83,7 @@ async def register(user: User):
     """Маршрут для регистрации пользователя."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     try:
         # Проверка существования пользователя с тем же email
         cursor.execute("SELECT COUNT(*) FROM users WHERE email = ?", (user.email,))
@@ -99,11 +110,11 @@ async def register(user: User):
         conn.commit()
 
         return {"message": "Регистрация прошла успешно!"}
-    
+
     except firebirdsql.Error as e:
-        print(f"Ошибка при регистрации пользователя: {e}")
+        logger.error(f"Ошибка при регистрации пользователя: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при регистрации пользователя")
-    
+
     finally:
         cursor.close()
         conn.close()
@@ -124,11 +135,11 @@ async def login(login: LoginRequest):
         role = result[1]  # Получаем роль пользователя
 
         return {"message": "Вход выполнен успешно!", "role": role}  # Возвращаем роль пользователя
-    
+
     except firebirdsql.Error as e:
-        print(f"Ошибка при входе пользователя: {e}")
+        logger.error(f"Ошибка при входе пользователя: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при входе пользователя")
-    
+
     finally:
         cursor.close()
         conn.close()
@@ -150,14 +161,34 @@ async def assign_role(request: AssignRoleRequest):
 
         # Обновление роли пользователя
         cursor.execute("UPDATE users SET role = ? WHERE email = ?", (request.new_role, request.email))
+
+        # Если роль "ресторан", создаем запись в таблице ресторанов
+        if request.new_role == "restaurant":
+            # Проверка существования ресторана для данного пользователя
+            cursor.execute("SELECT COUNT(*) FROM restaurants WHERE email = ?", (request.email,))
+            restaurant_exists = cursor.fetchone()[0]
+            if not restaurant_exists:
+                # Генерация уникального идентификатора для ресторана
+                cursor.execute("SELECT GEN_ID(restaurant_id_seq, 1) FROM RDB$DATABASE")
+                restaurant_id = cursor.fetchone()[0]
+                # Заполнение обязательных полей
+                name = "Новый ресторан"
+                address = "Адрес не указан"
+                city = "Город не указан"
+                cuisine_type = "Кухня не указана"
+                cursor.execute("""
+                    INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, email)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (restaurant_id, name, address, city, cuisine_type, request.email))
+
         conn.commit()
 
         return {"message": f"Роль пользователя {request.email} успешно обновлена на {request.new_role}"}
-    
+
     except firebirdsql.Error as e:
-        print(f"Ошибка при назначении роли: {e}")
+        logger.error(f"Ошибка при назначении роли: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при назначении роли")
-    
+
     finally:
         cursor.close()
         conn.close()
@@ -173,11 +204,11 @@ async def get_users(admin_email: str):
         cursor.execute("SELECT name, email, role FROM users")
         users = cursor.fetchall()
         return [{"name": user[0], "email": user[1], "role": user[2]} for user in users]
-    
+
     except firebirdsql.Error as e:
-        print(f"Ошибка при получении списка пользователей: {e}")
+        logger.error(f"Ошибка при получении списка пользователей: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при получении списка пользователей")
-    
+
     finally:
         cursor.close()
         conn.close()
@@ -201,11 +232,95 @@ async def delete_user(email: str, admin_email: str):
         conn.commit()
 
         return {"message": f"Пользователь {email} успешно удален"}
-    
+
     except firebirdsql.Error as e:
-        print(f"Ошибка при удалении пользователя: {e}")
+        logger.error(f"Ошибка при удалении пользователя: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при удалении пользователя")
-    
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.post("/restaurant/{email}/")
+async def create_or_update_restaurant(
+    email: str,
+    name: str = Form(...),
+    address: str = Form(...),
+    city: str = Form(...),
+    cuisine_type: str = Form(...)
+):
+    """Маршрут для создания или обновления ресторана."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка существования пользователя
+        cursor.execute("SELECT COUNT(*) FROM users WHERE email = ?", (email,))
+        count = cursor.fetchone()[0]
+        if count == 0:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        # Проверка существования ресторана
+        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE email = ?", (email,))
+        result = cursor.fetchone()
+        restaurant_id = result[0] if result else None
+
+        if restaurant_id:
+            # Обновление ресторана
+            cursor.execute("""
+                UPDATE restaurants
+                SET name = ?, address = ?, city = ?, cuisine_type = ?
+                WHERE email = ?
+            """, (name, address, city, cuisine_type, email))
+        else:
+            # Создание нового ресторана
+            cursor.execute("SELECT GEN_ID(restaurant_id_seq, 1) FROM RDB$DATABASE")
+            restaurant_id = cursor.fetchone()[0]
+            cursor.execute("""
+                INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, email)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (restaurant_id, name, address, city, cuisine_type, email))
+
+        conn.commit()
+
+        return {"message": "Данные ресторана успешно сохранены"}
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при сохранении данных ресторана: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при сохранении данных ресторана")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/restaurant/{email}/")
+async def get_restaurant(email: str):
+    """Маршрут для получения информации о ресторане."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка существования ресторана
+        cursor.execute("""
+            SELECT r.name, r.address, r.city, r.cuisine_type
+            FROM restaurants r
+            WHERE r.email = ?
+        """, (email,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+        restaurant = {
+            "name": result[0],
+            "address": result[1],
+            "city": result[2],
+            "cuisine_type": result[3]
+        }
+
+        return restaurant
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении данных ресторана: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении данных ресторана")
+
     finally:
         cursor.close()
         conn.close()
