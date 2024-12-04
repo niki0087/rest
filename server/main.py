@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends, Form
+from fastapi import FastAPI, HTTPException, Depends, Form, Query
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 import firebirdsql
 import bcrypt
 import logging
@@ -320,6 +320,75 @@ async def get_restaurant(email: str):
     except firebirdsql.Error as e:
         logger.error(f"Ошибка при получении данных ресторана: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при получении данных ресторана")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/filter-restaurants/")
+async def filter_restaurants(
+    rating: Optional[float] = Query(None, description="Рейтинг ресторана"),
+    cuisine_type: Optional[str] = Query(None, description="Тип кухни"),
+    average_bill_min: Optional[float] = Query(None, description="Минимальный средний чек"),
+    average_bill_max: Optional[float] = Query(None, description="Максимальный средний чек"),
+    opening_hours: Optional[str] = Query(None, description="Часы работы"),
+    city: Optional[str] = Query(None, description="Город")
+):
+    """Маршрут для фильтрации ресторанов по различным параметрам."""
+    logger.debug(f"Фильтрация ресторанов с параметрами: {locals()}")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        query = """
+            SELECT r.name, r.address, r.city, r.cuisine_type, rs.average_bill, rs.opening_hours
+            FROM restaurants r
+            LEFT JOIN restaurant_settings rs ON r.RESTAURANT_ID = rs.restaurant_id
+            WHERE 1=1
+        """
+        params = []
+
+        if rating is not None:
+            query += " AND r.rating = ?"
+            params.append(rating)
+
+        if cuisine_type is not None:
+            query += " AND r.cuisine_type = ?"
+            params.append(cuisine_type)
+
+        if average_bill_min is not None:
+            query += " AND rs.average_bill >= ?"
+            params.append(average_bill_min)
+
+        if average_bill_max is not None:
+            query += " AND rs.average_bill <= ?"
+            params.append(average_bill_max)
+
+        if opening_hours is not None:
+            query += " AND rs.opening_hours = ?"
+            params.append(opening_hours)
+
+        if city is not None:
+            query += " AND UPPER(r.city) = ?"
+            params.append(city.upper())
+
+        cursor.execute(query, params)
+        restaurants = cursor.fetchall()
+
+        return [
+            {
+                "name": restaurant[0],
+                "address": restaurant[1],
+                "city": restaurant[2],
+                "cuisine_type": restaurant[3],
+                "average_bill": restaurant[4],
+                "opening_hours": restaurant[5]
+            }
+            for restaurant in restaurants
+        ]
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при фильтрации ресторанов: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при фильтрации ресторанов")
 
     finally:
         cursor.close()
