@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem, QHBoxLayout, QVBoxLayout, QGraphicsOpacityEffect, QSizePolicy)
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem, QHBoxLayout, QVBoxLayout, QGraphicsOpacityEffect, QSizePolicy, QStackedWidget)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve, QSize
 from PyQt5.QtGui import QPalette, QColor, QFont, QIcon, QPixmap, QPainter, QBrush, QPen
 import requests
@@ -79,7 +79,7 @@ class MainMenu(QWidget):
         palette.setColor(QPalette.Window, QColor("#001100"))
         self.setPalette(palette)
 
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
 
         self.filter_button = QPushButton()
         self.filter_button.setIcon(QIcon(get_image_path("filter-list-svgrepo-com1.svg")))
@@ -94,20 +94,22 @@ class MainMenu(QWidget):
         """)
         self.filter_button.clicked.connect(self.toggle_filter_menu)
 
-        layout.addWidget(self.filter_button, alignment=Qt.AlignTop | Qt.AlignRight)
+        main_layout.addWidget(self.filter_button, alignment=Qt.AlignTop | Qt.AlignRight)
 
-        self.restaurant_layout = QVBoxLayout()  # Используем QVBoxLayout вместо QGridLayout
-        layout.addLayout(self.restaurant_layout)
+        self.stacked_widget = QStackedWidget()
+        main_layout.addWidget(self.stacked_widget)
 
         self.home_button = QPushButton("На главную")
         self.home_button.clicked.connect(self.go_to_home)
-        layout.addWidget(self.home_button)
+        main_layout.addWidget(self.home_button)
 
-        self.setLayout(layout)
+        self.setLayout(main_layout)
 
         self.create_filter_menu()
+        self.create_restaurant_layout()
 
         self.filter_restaurants()
+        self.is_filter_menu_open = False  # Добавляем флаг для отслеживания состояния меню фильтров
 
     def create_filter_menu(self):
         self.filter_menu = QWidget(self)
@@ -172,8 +174,14 @@ class MainMenu(QWidget):
         self.filter_animation.setDuration(600)
         self.filter_animation.setEasingCurve(QEasingCurve.InOutQuad)
 
+    def create_restaurant_layout(self):
+        self.restaurant_layout = QVBoxLayout()
+        self.restaurant_widget = QWidget()
+        self.restaurant_widget.setLayout(self.restaurant_layout)
+        self.stacked_widget.addWidget(self.restaurant_widget)
+
     def toggle_filter_menu(self):
-        if self.filter_menu.isVisible():
+        if self.is_filter_menu_open:
             self.filter_animation.setStartValue(self.filter_menu.geometry())
             self.filter_animation.setEndValue(QRect(
                 self.filter_menu.x(),
@@ -183,9 +191,10 @@ class MainMenu(QWidget):
             ))
             self.filter_animation.start()
             QTimer.singleShot(600, self.filter_menu.hide)
+            self.stacked_widget.setCurrentIndex(0)
         else:
             self.filter_menu.show()
-            self.filter_menu.raise_()
+            self.filter_menu.raise_()  # Поднять список фильтров на вершину иерархии
 
             start_y = self.filter_button.geometry().bottom()
             filter_height = int(self.height() * 0.6)
@@ -204,6 +213,9 @@ class MainMenu(QWidget):
                 filter_height
             ))
             self.filter_animation.start()
+            self.stacked_widget.setCurrentIndex(1)
+
+        self.is_filter_menu_open = not self.is_filter_menu_open
 
     def filter_restaurants(self):
         self.rating_filter = self.rating_combo.currentText() if self.rating_combo.currentText() != "Рейтинг" else None
@@ -224,6 +236,8 @@ class MainMenu(QWidget):
             if response.status_code == 200:
                 restaurants = response.json()
                 self.display_restaurants(restaurants)
+                self.is_filter_menu_open = False
+                self.toggle_filter_menu()
             else:
                 QMessageBox.warning(self, "Ошибка", "Не удалось получить данные о ресторанах.")
         except requests.exceptions.RequestException as e:

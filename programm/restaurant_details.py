@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QMessageBox, QTextEdit, QScrollArea)
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap
 from PyQt5.QtCore import Qt
+from menu_window import MenuWindow  # Импорт нового класса
 
 class RestaurantDetailsWindow(QWidget):
     def __init__(self, restaurant_info):
@@ -47,7 +48,7 @@ class RestaurantDetailsWindow(QWidget):
             border-radius: 10px;
             padding: 10px;
         """)
-        self.menu_button.clicked.connect(self.open_menu)
+        self.menu_button.clicked.connect(lambda: self.open_menu(restaurant_info.get("menu", [])))
         button_layout.addWidget(self.menu_button)
 
         self.tables_button = QPushButton("Свободные столики")
@@ -61,6 +62,10 @@ class RestaurantDetailsWindow(QWidget):
         self.tables_button.clicked.connect(self.open_tables)
         button_layout.addWidget(self.tables_button)
 
+        self.home_button = QPushButton("На главную")
+        self.home_button.clicked.connect(self.go_to_home)
+        button_layout.addWidget(self.home_button)
+
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
@@ -70,10 +75,16 @@ class RestaurantDetailsWindow(QWidget):
         if not pixmap.isNull():
             self.photo_label.setPixmap(pixmap.scaled(self.photo_label.width(), 300, Qt.KeepAspectRatio))
 
-    def open_menu(self):
-        # Логика открытия меню ресторана
-        QMessageBox.information(self, "Меню", "Функционал меню будет реализован позже.")
+    def open_menu(self, menu):
+        self.menu_window = MenuWindow(menu)
+        self.menu_window.show()
 
     def open_tables(self):
         # Логика открытия свободных столиков
         QMessageBox.information(self, "Свободные столики", "Функционал свободных столиков будет реализован позже.")
+
+    def go_to_home(self):
+        from auth import AuthWindow
+        self.auth_window = AuthWindow()
+        self.auth_window.show()
+        self.close()
