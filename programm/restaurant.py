@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox)
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox, QTextEdit, QFileDialog)
 from PyQt5.QtGui import QPalette, QColor, QFont
 import requests
 
@@ -32,8 +32,22 @@ class RestaurantWindow(QWidget):
         self.cuisine_combo = self.create_custom_widget(QComboBox(self))
         self.cuisine_combo.addItems(["Итальянская", "Японская", "Китайская", "Русская", "Другая"])
 
+        self.description_label = QLabel("Описание ресторана:")
+        self.description_label.setStyleSheet("color: #009900;")
+        self.description_input = self.create_custom_widget(QTextEdit(self))
+
+        self.photo_label = QLabel("Фотография ресторана:")
+        self.photo_label.setStyleSheet("color: #009900;")
+        self.photo_input = self.create_custom_widget(QLineEdit(self))
+        self.photo_button = self.create_custom_widget(QPushButton("Выбрать фото", self))
+        self.photo_button.clicked.connect(self.select_photo)
+
         self.save_button = self.create_custom_widget(QPushButton("Сохранить", self))
         self.save_button.clicked.connect(self.save_restaurant)
+
+        self.home_button = QPushButton("На главную")
+        self.home_button.clicked.connect(self.go_to_home)
+        layout.addWidget(self.home_button)
 
         layout.addWidget(self.name_label)
         layout.addWidget(self.name_input)
@@ -46,6 +60,13 @@ class RestaurantWindow(QWidget):
 
         layout.addWidget(self.cuisine_label)
         layout.addWidget(self.cuisine_combo)
+
+        layout.addWidget(self.description_label)
+        layout.addWidget(self.description_input)
+
+        layout.addWidget(self.photo_label)
+        layout.addWidget(self.photo_input)
+        layout.addWidget(self.photo_button)
 
         layout.addWidget(self.save_button)
 
@@ -65,6 +86,11 @@ class RestaurantWindow(QWidget):
         widget.setFixedHeight(40)
         return widget
 
+    def select_photo(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Выбрать фото", "", "Images (*.png *.xpm *.jpg)")
+        if file_name:
+            self.photo_input.setText(file_name)
+
     def load_restaurant(self):
         url = f"http://localhost:8000/restaurant/{self.user_email}/"
         try:
@@ -75,6 +101,8 @@ class RestaurantWindow(QWidget):
                 self.address_input.setText(restaurant.get("address", ""))
                 self.city_input.setText(restaurant.get("city", ""))
                 self.cuisine_combo.setCurrentText(restaurant.get("cuisine_type", ""))
+                self.description_input.setPlainText(restaurant.get("description", ""))
+                self.photo_input.setText(restaurant.get("restaurant_image", ""))
             else:
                 QMessageBox.warning(self, "Ошибка", "Не удалось загрузить данные ресторана.")
         except requests.exceptions.RequestException as e:
@@ -85,6 +113,8 @@ class RestaurantWindow(QWidget):
         address = self.address_input.text()
         city = self.city_input.text()
         cuisine_type = self.cuisine_combo.currentText()
+        description = self.description_input.toPlainText()
+        restaurant_image = self.photo_input.text()
 
         if not name or not address or not city or not cuisine_type:
             QMessageBox.warning(self, "Ошибка", "Пожалуйста, заполните обязательные поля.")
@@ -94,7 +124,9 @@ class RestaurantWindow(QWidget):
             "name": name,
             "address": address,
             "city": city,
-            "cuisine_type": cuisine_type
+            "cuisine_type": cuisine_type,
+            "description": description,
+            "restaurant_image": restaurant_image
         }
 
         url = f"http://localhost:8000/restaurant/{self.user_email}/"
@@ -106,3 +138,9 @@ class RestaurantWindow(QWidget):
                 QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить данные ресторана: {response.text}")
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+
+    def go_to_home(self):
+        from auth import AuthWindow
+        self.auth_window = AuthWindow()
+        self.auth_window.show()
+        self.close()

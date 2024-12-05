@@ -40,6 +40,8 @@ class Restaurant(BaseModel):
     address: str = Field(..., description="Адрес ресторана")
     city: str = Field(..., description="Город")
     cuisine_type: str = Field(..., description="Вид кухни")
+    description: Optional[str] = Field(None, description="Описание ресторана")
+    restaurant_image: Optional[str] = Field(None, description="Фотография ресторана")
 
 def get_db_connection():
     """Функция для подключения к базе данных."""
@@ -247,7 +249,9 @@ async def create_or_update_restaurant(
     name: str = Form(...),
     address: str = Form(...),
     city: str = Form(...),
-    cuisine_type: str = Form(...)
+    cuisine_type: str = Form(...),
+    description: Optional[str] = Form(None),
+    restaurant_image: Optional[str] = Form(None)
 ):
     """Маршрут для создания или обновления ресторана."""
     conn = get_db_connection()
@@ -268,17 +272,17 @@ async def create_or_update_restaurant(
             # Обновление ресторана
             cursor.execute("""
                 UPDATE restaurants
-                SET name = ?, address = ?, city = ?, cuisine_type = ?
+                SET name = ?, address = ?, city = ?, cuisine_type = ?, description = ?, restaurant_image = ?
                 WHERE email = ?
-            """, (name, address, city, cuisine_type, email))
+            """, (name, address, city, cuisine_type, description, restaurant_image, email))
         else:
             # Создание нового ресторана
             cursor.execute("SELECT GEN_ID(restaurant_id_seq, 1) FROM RDB$DATABASE")
             restaurant_id = cursor.fetchone()[0]
             cursor.execute("""
-                INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, email)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (restaurant_id, name, address, city, cuisine_type, email))
+                INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, description, restaurant_image, email)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (restaurant_id, name, address, city, cuisine_type, description, restaurant_image, email))
 
         conn.commit()
 
@@ -294,37 +298,90 @@ async def create_or_update_restaurant(
 
 @app.get("/restaurant/{email}/")
 async def get_restaurant(email: str):
-    """Маршрут для получения информации о ресторане."""
+    """Маршрут для получения данных о ресторане."""
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         # Проверка существования ресторана
         cursor.execute("""
-            SELECT r.name, r.address, r.city, r.cuisine_type
-            FROM restaurants r
-            WHERE r.email = ?
+            SELECT name, address, city, cuisine_type, description, restaurant_image
+            FROM restaurants
+            WHERE email = ?
         """, (email,))
         result = cursor.fetchone()
         if not result:
-            raise HTTPException(status_code=404, detail="Ресторан не найден")
+            raise HTTPException(status_code=404, detail="Данные о ресторане не найдены")
 
-        restaurant = {
+        return {
             "name": result[0],
             "address": result[1],
             "city": result[2],
-            "cuisine_type": result[3]
+            "cuisine_type": result[3],
+            "description": result[4],
+            "restaurant_image": result[5]
         }
 
-        return restaurant
-
     except firebirdsql.Error as e:
-        logger.error(f"Ошибка при получении данных ресторана: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка при получении данных ресторана")
+        logger.error(f"Ошибка при получении данных о ресторане: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении данных о ресторане")
 
     finally:
         cursor.close()
         conn.close()
 
+@app.post("/restaurant/{email}/")
+async def create_or_update_restaurant(
+    email: str,
+    name: str = Form(...),
+    address: str = Form(...),
+    city: str = Form(...),
+    cuisine_type: str = Form(...),
+    description: Optional[str] = Form(None),
+    restaurant_image: Optional[str] = Form(None)
+):
+    """Маршрут для создания или обновления ресторана."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка существования пользователя
+        cursor.execute("SELECT COUNT(*) FROM users WHERE email = ?", (email,))
+        count = cursor.fetchone()[0]
+        if count == 0:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        # Проверка существования ресторана
+        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE email = ?", (email,))
+        result = cursor.fetchone()
+        restaurant_id = result[0] if result else None
+
+        if restaurant_id:
+            # Обновление ресторана
+            cursor.execute("""
+                UPDATE restaurants
+                SET name = ?, address = ?, city = ?, cuisine_type = ?, description = ?, restaurant_image = ?
+                WHERE email = ?
+            """, (name, address, city, cuisine_type, description, restaurant_image, email))
+        else:
+            # Создание нового ресторана
+            cursor.execute("SELECT GEN_ID(restaurant_id_seq, 1) FROM RDB$DATABASE")
+            restaurant_id = cursor.fetchone()[0]
+            cursor.execute("""
+                INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, description, restaurant_image, email)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (restaurant_id, name, address, city, cuisine_type, description, restaurant_image, email))
+
+        conn.commit()
+
+        return {"message": "Данные ресторана успешно сохранены"}
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при сохранении данных ресторана: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при сохранении данных ресторана")
+
+    finally:
+        cursor.close()
+        conn.close()
+        
 @app.get("/filter-restaurants/")
 async def filter_restaurants(
     rating: Optional[float] = Query(None, description="Рейтинг ресторана"),
@@ -340,7 +397,7 @@ async def filter_restaurants(
     cursor = conn.cursor()
     try:
         query = """
-            SELECT r.name, r.address, r.city, r.cuisine_type, rs.average_bill, rs.opening_hours
+            SELECT r.name, r.address, r.city, r.cuisine_type, r.rating, r.restaurant_image, rs.opening_hours, r.description, rs.average_bill
             FROM restaurants r
             LEFT JOIN restaurant_settings rs ON r.RESTAURANT_ID = rs.restaurant_id
             WHERE 1=1
@@ -380,8 +437,11 @@ async def filter_restaurants(
                 "address": restaurant[1],
                 "city": restaurant[2],
                 "cuisine_type": restaurant[3],
-                "average_bill": restaurant[4],
-                "opening_hours": restaurant[5]
+                "rating": restaurant[4],
+                "restaurant_image": restaurant[5],
+                "opening_hours": restaurant[6],
+                "description": restaurant[7],
+                "average_bill": restaurant[8]
             }
             for restaurant in restaurants
         ]
@@ -393,7 +453,7 @@ async def filter_restaurants(
     finally:
         cursor.close()
         conn.close()
-
+        
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

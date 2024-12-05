@@ -1,8 +1,73 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem)
-from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve
-from PyQt5.QtGui import QPalette, QColor, QFont, QIcon
+import os
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem, QHBoxLayout, QVBoxLayout, QGraphicsOpacityEffect, QSizePolicy)
+from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve, QSize
+from PyQt5.QtGui import QPalette, QColor, QFont, QIcon, QPixmap, QPainter, QBrush, QPen
 import requests
+from restaurant_details import RestaurantDetailsWindow  # Импорт нового класса
 
+def get_image_path(image_name):
+    return os.path.join(os.path.dirname(__file__), "img", image_name)
+
+class RestaurantButton(QPushButton):
+    def __init__(self, restaurant_info, main_menu_instance):
+        super().__init__()
+        self.restaurant_info = restaurant_info
+        self.main_menu_instance = main_menu_instance
+        self.setFixedHeight(200)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setStyleSheet("""
+            QPushButton {
+                border: none;
+                background-repeat: no-repeat;
+                background-position: center;
+                background-size: cover;
+                border-radius: 15px;
+            }
+            QPushButton::hover {
+                opacity: 0.8;
+            }
+        """)
+        self.set_background_image(get_image_path(restaurant_info.get("restaurant_image", "")))
+        self.set_text_overlay()
+        self.clicked.connect(self.open_restaurant_details)  # Подключение сигнала нажатия кнопки
+
+    def set_background_image(self, image_path):
+        pixmap = QPixmap(image_path)
+        if not pixmap.isNull():
+            self.setIcon(QIcon(pixmap))
+            self.setIconSize(QSize(self.width(), 200))
+
+    def set_text_overlay(self):
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        name_label = QLabel(self.restaurant_info.get("name", ""))
+        name_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        layout.addWidget(name_label)
+
+        rating_label = QLabel(f"Рейтинг: {self.restaurant_info.get('rating', 'N/A')}")
+        rating_label.setStyleSheet("color: white; font-size: 14px;")
+        layout.addWidget(rating_label)
+
+        opening_hours_label = QLabel(f"Часы работы: {self.restaurant_info.get('opening_hours', 'N/A')}")
+        opening_hours_label.setStyleSheet("color: white; font-size: 14px;")
+        layout.addWidget(opening_hours_label)
+
+        container = QWidget()
+        container.setLayout(layout)
+        container.setStyleSheet("background-color: rgba(0, 0, 0, 100); border-radius: 10px;")
+
+        self.setLayout(QVBoxLayout())
+        self.layout().addWidget(container)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.set_background_image(get_image_path(self.restaurant_info.get("restaurant_image", "")))
+
+    def open_restaurant_details(self):
+        self.details_window = RestaurantDetailsWindow(self.restaurant_info)
+        self.details_window.show()
 
 class MainMenu(QWidget):
     def __init__(self):
@@ -10,16 +75,14 @@ class MainMenu(QWidget):
         self.setWindowTitle("Основное меню")
         self.setGeometry(100, 100, 800, 600)
 
-        # Настройка цвета окна
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#001100"))
         self.setPalette(palette)
 
         layout = QVBoxLayout()
 
-        # Кнопка фильтров
         self.filter_button = QPushButton()
-        self.filter_button.setIcon(QIcon("/home/nikita/Загрузки/arts_for_kurs/filter-list-svgrepo-com1.svg"))
+        self.filter_button.setIcon(QIcon(get_image_path("filter-list-svgrepo-com1.svg")))
         self.filter_button.setStyleSheet("""
             background-color: #001100;
             color: #009900;
@@ -33,26 +96,15 @@ class MainMenu(QWidget):
 
         layout.addWidget(self.filter_button, alignment=Qt.AlignTop | Qt.AlignRight)
 
-        # Список ресторанов
-        self.restaurant_list = QListWidget()
-        self.restaurant_list.setStyleSheet("""
-            background-color: #001100;
-            color: #009900;
-            border: 2px solid #009900;
-            border-radius: 10px;
-            padding: 10px;
-        """)
-        layout.addWidget(self.restaurant_list)
+        self.restaurant_layout = QVBoxLayout()  # Используем QVBoxLayout вместо QGridLayout
+        layout.addLayout(self.restaurant_layout)
+
+        self.home_button = QPushButton("На главную")
+        self.home_button.clicked.connect(self.go_to_home)
+        layout.addWidget(self.home_button)
 
         self.setLayout(layout)
 
-        # Фильтры
-        self.rating_filter = None
-        self.cuisine_type_filter = None
-        self.average_bill_filter = None
-        self.city_filter = None
-
-        # Меню фильтров
         self.create_filter_menu()
 
         self.filter_restaurants()
@@ -71,7 +123,6 @@ class MainMenu(QWidget):
 
         filter_layout = QGridLayout()
 
-        # Стиль виджетов
         custom_widget_style = """
             background-color: #001100;
             color: #009900;
@@ -80,7 +131,6 @@ class MainMenu(QWidget):
             border-radius: 20px;
         """
 
-        # Рейтинг
         self.rating_label = QLabel("Рейтинг:")
         self.rating_label.setStyleSheet("color: #009900;")
         self.rating_combo = QComboBox()
@@ -90,7 +140,6 @@ class MainMenu(QWidget):
         filter_layout.addWidget(self.rating_label, 0, 0)
         filter_layout.addWidget(self.rating_combo, 0, 1)
 
-        # Тип кухни
         self.cuisine_type_label = QLabel("Тип кухни:")
         self.cuisine_type_label.setStyleSheet("color: #009900;")
         self.cuisine_type_combo = QComboBox()
@@ -100,7 +149,6 @@ class MainMenu(QWidget):
         filter_layout.addWidget(self.cuisine_type_label, 1, 0)
         filter_layout.addWidget(self.cuisine_type_combo, 1, 1)
 
-        # Средний чек
         self.average_bill_label = QLabel("Средний чек:")
         self.average_bill_label.setStyleSheet("color: #009900;")
         self.average_bill_combo = QComboBox()
@@ -110,7 +158,6 @@ class MainMenu(QWidget):
         filter_layout.addWidget(self.average_bill_label, 2, 0)
         filter_layout.addWidget(self.average_bill_combo, 2, 1)
 
-        # Город
         self.city_label = QLabel("Город:")
         self.city_label.setStyleSheet("color: #009900;")
         self.city_input = QLineEdit()
@@ -121,7 +168,6 @@ class MainMenu(QWidget):
 
         self.filter_menu.setLayout(filter_layout)
 
-        # Анимация фильтра
         self.filter_animation = QPropertyAnimation(self.filter_menu, b"geometry")
         self.filter_animation.setDuration(600)
         self.filter_animation.setEasingCurve(QEasingCurve.InOutQuad)
@@ -139,23 +185,23 @@ class MainMenu(QWidget):
             QTimer.singleShot(600, self.filter_menu.hide)
         else:
             self.filter_menu.show()
-            self.filter_menu.raise_()  # Убедиться, что меню отображается поверх
+            self.filter_menu.raise_()
 
-            start_y = self.filter_button.geometry().bottom()  # Позиция под кнопкой
-            filter_height = int(self.height() * 0.6)  # Высота меню фильтров
+            start_y = self.filter_button.geometry().bottom()
+            filter_height = int(self.height() * 0.6)
 
             self.filter_animation.setStartValue(QRect(
                 0,
                 start_y,
                 self.width(),
-                0  # Начальная высота
+                0
             ))
 
             self.filter_animation.setEndValue(QRect(
                 0,
                 start_y,
                 self.width(),
-                filter_height  # Конечная высота
+                filter_height
             ))
             self.filter_animation.start()
 
@@ -184,8 +230,22 @@ class MainMenu(QWidget):
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
     def display_restaurants(self, restaurants):
-        self.restaurant_list.clear()
-        for restaurant in restaurants:
-            item = QListWidgetItem(f"{restaurant['name']} - {restaurant['cuisine_type']} - {restaurant['city']}")
-            self.restaurant_list.addItem(item)
+        for i in reversed(range(self.restaurant_layout.count())):
+            self.restaurant_layout.itemAt(i).widget().setParent(None)
 
+        for restaurant in restaurants:
+            button = RestaurantButton(restaurant, self)
+            self.restaurant_layout.addWidget(button)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.filter_menu.setGeometry(0, 0, self.width(), int(self.height() * 0.6))
+        for i in range(self.restaurant_layout.count()):
+            button = self.restaurant_layout.itemAt(i).widget()
+            button.setFixedWidth(int(self.width() * 0.75))
+
+    def go_to_home(self):
+        from auth import AuthWindow
+        self.auth_window = AuthWindow()
+        self.auth_window.show()
+        self.close()

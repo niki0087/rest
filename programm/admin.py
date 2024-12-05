@@ -24,6 +24,10 @@ class AdminWindow(QWidget):
 
         layout.addLayout(button_layout)
 
+        self.home_button = QPushButton("На главную")
+        self.home_button.clicked.connect(self.go_to_home)
+        layout.addWidget(self.home_button)
+
         self.setLayout(layout)
 
         self.load_users()
@@ -88,3 +92,9 @@ class AdminWindow(QWidget):
                     QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
         else:
             QMessageBox.warning(self, "Ошибка", "Выберите пользователя для изменения роли.")
+
+    def go_to_home(self):
+        from auth import AuthWindow
+        self.auth_window = AuthWindow()
+        self.auth_window.show()
+        self.close()
