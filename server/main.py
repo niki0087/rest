@@ -1,9 +1,10 @@
-from fastapi import FastAPI, HTTPException, Depends, Form, Query
+from fastapi import FastAPI, HTTPException, Depends, Form, Query, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import firebirdsql
 import bcrypt
 import logging
+import base64
 
 # Настройки подключения к базе данных Firebird
 DB_HOST = "localhost"
@@ -42,6 +43,12 @@ class Restaurant(BaseModel):
     cuisine_type: str = Field(..., description="Вид кухни")
     description: Optional[str] = Field(None, description="Описание ресторана")
     restaurant_image: Optional[str] = Field(None, description="Фотография ресторана")
+
+class MenuItem(BaseModel):
+    name: str = Field(..., description="Название блюда")
+    description: Optional[str] = Field(None, description="Описание блюда")
+    price: float = Field(..., description="Цена блюда")
+    photo: Optional[str] = Field(None, description="Фотография блюда")
 
 def get_db_connection():
     """Функция для подключения к базе данных."""
@@ -304,7 +311,7 @@ async def get_restaurant(email: str):
     try:
         # Проверка существования ресторана
         cursor.execute("""
-            SELECT name, address, city, cuisine_type, description, restaurant_image
+            SELECT name, address, city, cuisine_type, description, restaurant_image, restaurant_id 
             FROM restaurants
             WHERE email = ?
         """, (email,))
@@ -313,6 +320,7 @@ async def get_restaurant(email: str):
             raise HTTPException(status_code=404, detail="Данные о ресторане не найдены")
 
         return {
+            "restaurant_id": result[6],
             "name": result[0],
             "address": result[1],
             "city": result[2],
@@ -329,59 +337,6 @@ async def get_restaurant(email: str):
         cursor.close()
         conn.close()
 
-@app.post("/restaurant/{email}/")
-async def create_or_update_restaurant(
-    email: str,
-    name: str = Form(...),
-    address: str = Form(...),
-    city: str = Form(...),
-    cuisine_type: str = Form(...),
-    description: Optional[str] = Form(None),
-    restaurant_image: Optional[str] = Form(None)
-):
-    """Маршрут для создания или обновления ресторана."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        # Проверка существования пользователя
-        cursor.execute("SELECT COUNT(*) FROM users WHERE email = ?", (email,))
-        count = cursor.fetchone()[0]
-        if count == 0:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-        # Проверка существования ресторана
-        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE email = ?", (email,))
-        result = cursor.fetchone()
-        restaurant_id = result[0] if result else None
-
-        if restaurant_id:
-            # Обновление ресторана
-            cursor.execute("""
-                UPDATE restaurants
-                SET name = ?, address = ?, city = ?, cuisine_type = ?, description = ?, restaurant_image = ?
-                WHERE email = ?
-            """, (name, address, city, cuisine_type, description, restaurant_image, email))
-        else:
-            # Создание нового ресторана
-            cursor.execute("SELECT GEN_ID(restaurant_id_seq, 1) FROM RDB$DATABASE")
-            restaurant_id = cursor.fetchone()[0]
-            cursor.execute("""
-                INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, description, restaurant_image, email)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (restaurant_id, name, address, city, cuisine_type, description, restaurant_image, email))
-
-        conn.commit()
-
-        return {"message": "Данные ресторана успешно сохранены"}
-
-    except firebirdsql.Error as e:
-        logger.error(f"Ошибка при сохранении данных ресторана: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка при сохранении данных ресторана")
-
-    finally:
-        cursor.close()
-        conn.close()
-        
 @app.get("/filter-restaurants/")
 async def filter_restaurants(
     rating: Optional[float] = Query(None, description="Рейтинг ресторана"),
@@ -397,7 +352,7 @@ async def filter_restaurants(
     cursor = conn.cursor()
     try:
         query = """
-            SELECT r.name, r.address, r.city, r.cuisine_type, r.rating, r.restaurant_image, rs.opening_hours, r.description, rs.average_bill
+            SELECT r.name, r.address, r.city, r.cuisine_type, r.rating, r.restaurant_image, rs.opening_hours, r.description, rs.average_bill, r.restaurant_id 
             FROM restaurants r
             LEFT JOIN restaurant_settings rs ON r.RESTAURANT_ID = rs.restaurant_id
             WHERE 1=1
@@ -433,6 +388,7 @@ async def filter_restaurants(
 
         return [
             {
+                "restaurant_id": restaurant[9],
                 "name": restaurant[0],
                 "address": restaurant[1],
                 "city": restaurant[2],
@@ -453,7 +409,131 @@ async def filter_restaurants(
     finally:
         cursor.close()
         conn.close()
-        
+
+@app.get("/menu/{restaurant_id}/")
+async def get_menu(restaurant_id: int):
+    """Маршрут для получения меню ресторана."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка существования ресторана
+        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE RESTAURANT_ID = ?", (restaurant_id,))
+        result = cursor.fetchone()
+        if not result:
+            print(1)
+            raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+        # Получение меню ресторана
+        cursor.execute("""
+            SELECT name, description, price, photo_menu_blob
+            FROM menu
+            WHERE RESTAURANT_ID = ?
+        """, (restaurant_id,))
+        menu = cursor.fetchall()
+
+        return [
+            {
+                "name": dish[0],
+                "description": dish[1],
+                "price": dish[2],
+                "photo": base64.b64encode(dish[3]).decode('utf-8') if dish[3] else None
+            }
+            for dish in menu
+        ]
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении меню: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении меню")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.post("/menu/{email}/")
+async def create_or_update_menu(
+    email: str,
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    price: float = Form(...),
+    photo: Optional[str] = Form(None)
+):
+    """Маршрут для создания или обновления меню ресторана."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка существования ресторана
+        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE email = ?", (email,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+        restaurant_id = result[0]
+
+        # Проверка существования блюда
+        cursor.execute("SELECT MENU_ITEM_ID FROM menu WHERE RESTAURANT_ID = ? AND name = ?", (restaurant_id, name))
+        result = cursor.fetchone()
+        menu_item_id = result[0] if result else None
+
+        if menu_item_id:
+            # Обновление блюда
+            cursor.execute("""
+                UPDATE menu
+                SET description = ?, price = ?, photo_menu_blob = ?
+                WHERE MENU_ITEM_ID = ?
+            """, (description, price, base64.b64decode(photo) if photo else None, menu_item_id))
+        else:
+            # Создание нового блюда
+            cursor.execute("SELECT GEN_ID(menu_item_id_seq, 1) FROM RDB$DATABASE")
+            menu_item_id = cursor.fetchone()[0]
+            cursor.execute("""
+                INSERT INTO menu (MENU_ITEM_ID, RESTAURANT_ID, name, description, price, photo_menu_blob)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (menu_item_id, restaurant_id, name, description, price, base64.b64decode(photo) if photo else None))
+
+        conn.commit()
+
+        return {"message": "Данные меню успешно сохранены"}
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при сохранении данных меню: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при сохранении данных меню")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.delete("/menu/{email}/{dish_name}/")
+async def delete_dish(email: str, dish_name: str):
+    """Маршрут для удаления блюда из меню ресторана."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка существования ресторана
+        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE email = ?", (email,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+        restaurant_id = result[0]
+
+        # Удаление блюда из меню
+        cursor.execute("""
+            DELETE FROM menu
+            WHERE RESTAURANT_ID = ? AND name = ?
+        """, (restaurant_id, dish_name))
+        conn.commit()
+
+        return {"message": "Блюдо успешно удалено из меню"}
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при удалении блюда: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при удалении блюда")
+
+    finally:
+        cursor.close()
+        conn.close()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

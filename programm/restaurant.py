@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox, QTextEdit, QFileDialog)
 from PyQt5.QtGui import QPalette, QColor, QFont
 import requests
+from menu_editor import MenuEditorWindow  # Импорт нового класса
 
 class RestaurantWindow(QWidget):
     def __init__(self, user_email):
@@ -45,6 +46,9 @@ class RestaurantWindow(QWidget):
         self.save_button = self.create_custom_widget(QPushButton("Сохранить", self))
         self.save_button.clicked.connect(self.save_restaurant)
 
+        self.menu_button = self.create_custom_widget(QPushButton("Редактировать меню", self))
+        self.menu_button.clicked.connect(self.open_menu_editor)
+
         self.home_button = QPushButton("На главную")
         self.home_button.clicked.connect(self.go_to_home)
         layout.addWidget(self.home_button)
@@ -69,6 +73,7 @@ class RestaurantWindow(QWidget):
         layout.addWidget(self.photo_button)
 
         layout.addWidget(self.save_button)
+        layout.addWidget(self.menu_button)
 
         self.setLayout(layout)
 
@@ -138,6 +143,46 @@ class RestaurantWindow(QWidget):
                 QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить данные ресторана: {response.text}")
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+
+    def open_menu_editor(self):
+        # Загрузка данных ресторана
+        restaurant_id = self.get_restaurant_id()
+        if not restaurant_id:
+            QMessageBox.warning(self, "Ошибка", "Не удалось получить идентификатор ресторана.")
+            return
+
+        # Загрузка меню ресторана
+        menu = self.load_menu(restaurant_id)
+
+        # Открытие окна редактора меню
+        self.menu_editor_window = MenuEditorWindow(self.user_email, menu)
+        self.menu_editor_window.show()
+
+    def get_restaurant_id(self):
+        url = f"http://localhost:8000/restaurant/{self.user_email}/"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                restaurant = response.json()
+                return restaurant.get("restaurant_id")
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить данные ресторана.")
+        except requests.exceptions.RequestException as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+        return None
+
+    def load_menu(self, restaurant_id):
+        url = f"http://localhost:8000/menu/{restaurant_id}/"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                menu = response.json()
+                return menu
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить меню ресторана.")
+        except requests.exceptions.RequestException as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+        return []
 
     def go_to_home(self):
         from auth import AuthWindow
