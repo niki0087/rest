@@ -9,7 +9,7 @@ class AdminWindow(QWidget):
         self.setGeometry(100, 100, 800, 600)
 
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("#001100"))
+        palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)
 
         layout = QVBoxLayout()

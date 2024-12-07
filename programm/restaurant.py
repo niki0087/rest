@@ -11,34 +11,34 @@ class RestaurantWindow(QWidget):
         self.user_email = user_email
 
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("#001100"))
+        palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)
 
         layout = QVBoxLayout()
 
         self.name_label = QLabel("Название ресторана:")
-        self.name_label.setStyleSheet("color: #009900;")
+        self.name_label.setStyleSheet("color: #000000;")
         self.name_input = self.create_custom_widget(QLineEdit(self))
 
         self.address_label = QLabel("Адрес ресторана:")
-        self.address_label.setStyleSheet("color: #009900;")
+        self.address_label.setStyleSheet("color: #000000;")
         self.address_input = self.create_custom_widget(QLineEdit(self))
 
         self.city_label = QLabel("Город:")
-        self.city_label.setStyleSheet("color: #009900;")
+        self.city_label.setStyleSheet("color: #000000;")
         self.city_input = self.create_custom_widget(QLineEdit(self))
 
         self.cuisine_label = QLabel("Вид кухни:")
-        self.cuisine_label.setStyleSheet("color: #009900;")
+        self.cuisine_label.setStyleSheet("color: #000000;")
         self.cuisine_combo = self.create_custom_widget(QComboBox(self))
         self.cuisine_combo.addItems(["Итальянская", "Японская", "Китайская", "Русская", "Другая"])
 
         self.description_label = QLabel("Описание ресторана:")
-        self.description_label.setStyleSheet("color: #009900;")
+        self.description_label.setStyleSheet("color: #000000;")
         self.description_input = self.create_custom_widget(QTextEdit(self))
 
         self.photo_label = QLabel("Фотография ресторана:")
-        self.photo_label.setStyleSheet("color: #009900;")
+        self.photo_label.setStyleSheet("color: #000000;")
         self.photo_input = self.create_custom_widget(QLineEdit(self))
         self.photo_button = self.create_custom_widget(QPushButton("Выбрать фото", self))
         self.photo_button.clicked.connect(self.select_photo)
@@ -81,10 +81,10 @@ class RestaurantWindow(QWidget):
 
     def create_custom_widget(self, widget):
         widget.setStyleSheet("""
-            background-color: #001100;
-            color: #009900;
+            background-color: #CCFFCC;
+            color: #000000;
             padding: 10px;
-            border: 2px solid #009900;
+            border: 2px solid #000000;
             border-radius: 20px;
         """)
         widget.setFont(QFont("Arial", 12))

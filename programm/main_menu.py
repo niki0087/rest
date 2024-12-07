@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem, QHBoxLayout, QVBoxLayout, QGraphicsOpacityEffect, QSizePolicy, QStackedWidget)
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem, QHBoxLayout, QVBoxLayout, QGraphicsOpacityEffect, QSizePolicy, QStackedWidget, QScrollArea, QFrame, QLabel, QVBoxLayout, QHBoxLayout, QPushButton)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve, QSize
 from PyQt5.QtGui import QPalette, QColor, QFont, QIcon, QPixmap, QPainter, QBrush, QPen
 import requests
@@ -76,7 +76,7 @@ class MainMenu(QWidget):
         self.setGeometry(100, 100, 800, 600)
 
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("#001100"))
+        palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)
 
         main_layout = QVBoxLayout()
@@ -84,9 +84,9 @@ class MainMenu(QWidget):
         self.filter_button = QPushButton()
         self.filter_button.setIcon(QIcon(get_image_path("filter-list-svgrepo-com1.svg")))
         self.filter_button.setStyleSheet("""
-            background-color: #001100;
-            color: #009900;
-            border: 2px solid #009900;
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
             border-radius: 10px;
             padding: 5px;
             min-width: 50px;
@@ -114,9 +114,9 @@ class MainMenu(QWidget):
     def create_filter_menu(self):
         self.filter_menu = QWidget(self)
         self.filter_menu.setStyleSheet("""
-            background-color: #001100;
-            color: #009900;
-            border: 2px solid #009900;
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
             border-radius: 10px;
             padding: 10px;
         """)
@@ -126,15 +126,15 @@ class MainMenu(QWidget):
         filter_layout = QGridLayout()
 
         custom_widget_style = """
-            background-color: #001100;
-            color: #009900;
+            background-color: #CCFFCC;
+            color: #000000;
             padding: 10px;
-            border: 2px solid #009900;
+            border: 2px solid #000000;
             border-radius: 20px;
         """
 
         self.rating_label = QLabel("Рейтинг:")
-        self.rating_label.setStyleSheet("color: #009900;")
+        self.rating_label.setStyleSheet("color: #000000;")
         self.rating_combo = QComboBox()
         self.rating_combo.setStyleSheet(custom_widget_style)
         self.rating_combo.addItems(["Рейтинг", "1.0", "2.0", "3.0", "4.0", "5.0"])
@@ -143,7 +143,7 @@ class MainMenu(QWidget):
         filter_layout.addWidget(self.rating_combo, 0, 1)
 
         self.cuisine_type_label = QLabel("Тип кухни:")
-        self.cuisine_type_label.setStyleSheet("color: #009900;")
+        self.cuisine_type_label.setStyleSheet("color: #000000;")
         self.cuisine_type_combo = QComboBox()
         self.cuisine_type_combo.setStyleSheet(custom_widget_style)
         self.cuisine_type_combo.addItems(["Тип кухни", "Итальянская", "Японская", "Китайская", "Русская", "Другая"])
@@ -152,7 +152,7 @@ class MainMenu(QWidget):
         filter_layout.addWidget(self.cuisine_type_combo, 1, 1)
 
         self.average_bill_label = QLabel("Средний чек:")
-        self.average_bill_label.setStyleSheet("color: #009900;")
+        self.average_bill_label.setStyleSheet("color: #000000;")
         self.average_bill_combo = QComboBox()
         self.average_bill_combo.setStyleSheet(custom_widget_style)
         self.average_bill_combo.addItems(["Средний чек", "От 0 до 1000", "От 1000 до 2000", "От 2000 до 3000"])
@@ -161,7 +161,7 @@ class MainMenu(QWidget):
         filter_layout.addWidget(self.average_bill_combo, 2, 1)
 
         self.city_label = QLabel("Город:")
-        self.city_label.setStyleSheet("color: #009900;")
+        self.city_label.setStyleSheet("color: #000000;")
         self.city_input = QLineEdit()
         self.city_input.setStyleSheet(custom_widget_style)
         self.city_input.textChanged.connect(self.filter_restaurants)

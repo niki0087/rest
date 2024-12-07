@@ -9,7 +9,7 @@ class AuthWindow(QWidget):
         self.setGeometry(100, 100, 800, 600)
 
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("#001100"))
+        palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)
 
         self.layout = QStackedLayout(self)
@@ -19,10 +19,10 @@ class AuthWindow(QWidget):
 
     def create_custom_widget(self, widget):
         widget.setStyleSheet("""
-            background-color: #001100;
-            color: #009900;
+            background-color: #CCFFCC;
+            color: #000000;
             padding: 10px;
-            border: 2px solid #009900;
+            border: 2px solid #000000;
             border-radius: 20px;
         """)
         widget.setFont(QFont("Arial", 12))
@@ -36,15 +36,15 @@ class AuthWindow(QWidget):
         layout.setContentsMargins(0, 75, 0, 50)
 
         self.name_label = QLabel("Имя:")
-        self.name_label.setStyleSheet("color: #009900;")
+        self.name_label.setStyleSheet("color: #000000;")
         self.name_input = self.create_custom_widget(QLineEdit(self))
 
         self.email_label = QLabel("Email:")
-        self.email_label.setStyleSheet("color: #009900;")
+        self.email_label.setStyleSheet("color: #000000;")
         self.email_input = self.create_custom_widget(QLineEdit(self))
 
         self.password_label = QLabel("Пароль:")
-        self.password_label.setStyleSheet("color: #009900;")
+        self.password_label.setStyleSheet("color: #000000;")
         self.password_input = self.create_custom_widget(QLineEdit(self))
         self.password_input.setEchoMode(QLineEdit.Password)
 
@@ -80,11 +80,11 @@ class AuthWindow(QWidget):
         layout.setContentsMargins(0, 75, 0, 50)
 
         self.login_email_label = QLabel("Email:")
-        self.login_email_label.setStyleSheet("color: #009900;")
+        self.login_email_label.setStyleSheet("color: #000000;")
         self.login_email_input = self.create_custom_widget(QLineEdit(self))
 
         self.login_password_label = QLabel("Пароль:")
-        self.login_password_label.setStyleSheet("color: #009900;")
+        self.login_password_label.setStyleSheet("color: #000000;")
         self.login_password_input = self.create_custom_widget(QLineEdit(self))
         self.login_password_input.setEchoMode(QLineEdit.Password)
 

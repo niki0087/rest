@@ -13,7 +13,7 @@ class MenuEditorWindow(QWidget):
         self.menu = menu if menu else []
 
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("#001100"))
+        palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)
 
         layout = QVBoxLayout()
@@ -22,19 +22,19 @@ class MenuEditorWindow(QWidget):
         layout.addWidget(self.menu_list)
 
         self.name_label = QLabel("Название блюда:")
-        self.name_label.setStyleSheet("color: #009900;")
+        self.name_label.setStyleSheet("color: #000000;")
         self.name_input = self.create_custom_widget(QLineEdit(self))
 
         self.description_label = QLabel("Описание блюда:")
-        self.description_label.setStyleSheet("color: #009900;")
+        self.description_label.setStyleSheet("color: #000000;")
         self.description_input = self.create_custom_widget(QTextEdit(self))
 
         self.price_label = QLabel("Цена блюда:")
-        self.price_label.setStyleSheet("color: #009900;")
+        self.price_label.setStyleSheet("color: #000000;")
         self.price_input = self.create_custom_widget(QLineEdit(self))
 
         self.photo_label = QLabel("Фотография блюда:")
-        self.photo_label.setStyleSheet("color: #009900;")
+        self.photo_label.setStyleSheet("color: #000000;")
         self.photo_input = self.create_custom_widget(QLineEdit(self))
         self.photo_button = self.create_custom_widget(QPushButton("Выбрать фото", self))
         self.photo_button.clicked.connect(self.select_photo)
@@ -74,10 +74,10 @@ class MenuEditorWindow(QWidget):
 
     def create_custom_widget(self, widget):
         widget.setStyleSheet("""
-            background-color: #001100;
-            color: #009900;
+            background-color: #CCFFCC;
+            color: #000000;
             padding: 10px;
-            border: 2px solid #009900;
+            border: 2px solid #000000;
             border-radius: 20px;
         """)
         widget.setFont(QFont("Arial", 12))
