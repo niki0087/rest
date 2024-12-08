@@ -156,7 +156,8 @@ class RestaurantWindow(QWidget):
 
         # Открытие окна редактора меню
         self.menu_editor_window = MenuEditorWindow(self.user_email, menu)
-        self.menu_editor_window.show()
+        self.layout.addWidget(self.menu_editor_window)
+        self.layout.setCurrentWidget(self.menu_editor_window)
 
     def get_restaurant_id(self):
         url = f"http://localhost:8000/restaurant/{self.user_email}/"
@@ -187,5 +188,4 @@ class RestaurantWindow(QWidget):
     def go_to_home(self):
         from auth import AuthWindow
         self.auth_window = AuthWindow()
-        self.auth_window.show()
-        self.close()
+        self.auth_window.layout.setCurrentWidget(self.auth_window)

@@ -159,16 +159,18 @@ class AuthWindow(QWidget):
                 if role == "admin":
                     from admin import AdminWindow
                     self.admin_window = AdminWindow()
-                    self.admin_window.show()
+                    self.layout.addWidget(self.admin_window)
+                    self.layout.setCurrentWidget(self.admin_window)
                 elif role == "restaurant":
                     from restaurant import RestaurantWindow
                     self.restaurant_window = RestaurantWindow(email)
-                    self.restaurant_window.show()
+                    self.layout.addWidget(self.restaurant_window)
+                    self.layout.setCurrentWidget(self.restaurant_window)
                 else:
                     from main_menu import MainMenu
                     self.main_menu = MainMenu()
-                    self.main_menu.show()
-                self.close()
+                    self.layout.addWidget(self.main_menu)
+                    self.layout.setCurrentWidget(self.main_menu)
             else:
                 QMessageBox.warning(self, "Ошибка", response.text)
         except requests.exceptions.RequestException as e:

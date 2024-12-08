@@ -9,10 +9,11 @@ def get_image_path(image_name):
     return os.path.join(os.path.dirname(__file__), "img", image_name)
 
 class RestaurantButton(QPushButton):
-    def __init__(self, restaurant_info, main_menu_instance):
+    def __init__(self, restaurant_info, main_menu_instance, stacked_widget):
         super().__init__()
         self.restaurant_info = restaurant_info
         self.main_menu_instance = main_menu_instance
+        self.stacked_widget = stacked_widget  # Store the stacked_widget
         self.setFixedHeight(200)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setStyleSheet("""
@@ -50,9 +51,9 @@ class RestaurantButton(QPushButton):
         rating_label.setStyleSheet("color: white; font-size: 14px;")
         layout.addWidget(rating_label)
 
-        opening_hours_label = QLabel(f"Часы работы: {self.restaurant_info.get('opening_hours', 'N/A')}")
-        opening_hours_label.setStyleSheet("color: white; font-size: 14px;")
-        layout.addWidget(opening_hours_label)
+        city_label = QLabel(f"Город: {self.restaurant_info.get('city', 'N/A')}")
+        city_label.setStyleSheet("color: white; font-size: 14px;")
+        layout.addWidget(city_label)
 
         container = QWidget()
         container.setLayout(layout)
@@ -66,8 +67,9 @@ class RestaurantButton(QPushButton):
         self.set_background_image(get_image_path(self.restaurant_info.get("restaurant_image", "")))
 
     def open_restaurant_details(self):
-        self.details_window = RestaurantDetailsWindow(self.restaurant_info)
-        self.details_window.show()
+        self.details_window = RestaurantDetailsWindow(self.restaurant_info, self.stacked_widget)
+        self.stacked_widget.addWidget(self.details_window)  # Используем переданный stacked_widget
+        self.stacked_widget.setCurrentWidget(self.details_window)
 
 class MainMenu(QWidget):
     def __init__(self):
@@ -248,7 +250,7 @@ class MainMenu(QWidget):
             self.restaurant_layout.itemAt(i).widget().setParent(None)
 
         for restaurant in restaurants:
-            button = RestaurantButton(restaurant, self)
+            button = RestaurantButton(restaurant, self, self.stacked_widget)  # Передаем stacked_widget
             self.restaurant_layout.addWidget(button)
 
     def resizeEvent(self, event):
@@ -261,5 +263,4 @@ class MainMenu(QWidget):
     def go_to_home(self):
         from auth import AuthWindow
         self.auth_window = AuthWindow()
-        self.auth_window.show()
-        self.close()
+        self.auth_window.layout.setCurrentWidget(self.auth_window)

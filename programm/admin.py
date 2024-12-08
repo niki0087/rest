@@ -96,5 +96,4 @@ class AdminWindow(QWidget):
     def go_to_home(self):
         from auth import AuthWindow
         self.auth_window = AuthWindow()
-        self.auth_window.show()
-        self.close()
+        self.auth_window.layout.setCurrentWidget(self.auth_window)
