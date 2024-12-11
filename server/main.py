@@ -50,6 +50,11 @@ class MenuItem(BaseModel):
     price: float = Field(..., description="Цена блюда")
     photo: Optional[str] = Field(None, description="Фотография блюда")
 
+class SeatingRequest(BaseModel):
+    table_number: int = Field(..., description="Номер столика")
+    capacity: int = Field(..., description="Количество мест")
+    layout: str = Field(..., description="Расположение столика")
+
 def get_db_connection():
     """Функция для подключения к базе данных."""
     try:
@@ -420,7 +425,6 @@ async def get_menu(restaurant_id: int):
         cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE RESTAURANT_ID = ?", (restaurant_id,))
         result = cursor.fetchone()
         if not result:
-            print(1)
             raise HTTPException(status_code=404, detail="Ресторан не найден")
 
         # Получение меню ресторана
@@ -448,7 +452,6 @@ async def get_menu(restaurant_id: int):
     finally:
         cursor.close()
         conn.close()
-
 
 @app.post("/menu/{email}/")
 async def create_or_update_menu(
@@ -529,6 +532,73 @@ async def delete_dish(email: str, dish_name: str):
     except firebirdsql.Error as e:
         logger.error(f"Ошибка при удалении блюда: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при удалении блюда")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.post("/seating/{email}/")
+async def create_seating(email: str, seating: SeatingRequest):
+    """Маршрут для добавления столика."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE email = ?", (email,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+        restaurant_id = result[0]
+
+        # Проверка данных
+        if seating.table_number <= 0 or seating.capacity <= 0:
+            raise HTTPException(status_code=422, detail="Номер столика и количество мест должны быть положительными числами.")
+
+        cursor.execute("SELECT GEN_ID(seating_chart_id_seq, 1) FROM RDB$DATABASE")
+        seating_chart_id = cursor.fetchone()[0]
+
+        cursor.execute("""
+            INSERT INTO SEATING_CHARTS (SEATING_CHART_ID, RESTAURANT_ID, TABLE_NUMBER, CAPACITY, LAYOUT)
+            VALUES (?, ?, ?, ?, ?)
+        """, (seating_chart_id, restaurant_id, seating.table_number, seating.capacity, seating.layout))
+
+        conn.commit()
+
+        return {"message": "Столик успешно добавлен"}
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при добавлении столика: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при добавлении столика")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.delete("/seating/{email}/{table_number}/")
+async def delete_seating(email: str, table_number: int):
+    """Маршрут для удаления столика."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT RESTAURANT_ID FROM restaurants WHERE email = ?", (email,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+        restaurant_id = result[0]
+
+        cursor.execute("""
+            DELETE FROM SEATING_CHARTS
+            WHERE RESTAURANT_ID = ? AND TABLE_NUMBER = ?
+        """, (restaurant_id, table_number))
+
+        conn.commit()
+
+        return {"message": "Столик успешно удален"}
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при удалении столика: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при удалении столика")
 
     finally:
         cursor.close()
