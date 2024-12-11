@@ -1,9 +1,17 @@
 import os
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem, QHBoxLayout, QVBoxLayout, QGraphicsOpacityEffect, QSizePolicy, QStackedWidget, QScrollArea, QFrame, QLabel, QVBoxLayout, QHBoxLayout, QPushButton)
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QPushButton, QGridLayout, QListWidget, QComboBox, QLineEdit, QLabel, QMessageBox, QListWidgetItem, QHBoxLayout, QVBoxLayout, QGraphicsOpacityEffect, QSizePolicy, QStackedWidget, QScrollArea, QFrame, QLabel, QVBoxLayout, QHBoxLayout, QPushButton
+)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve, QSize
 from PyQt5.QtGui import QPalette, QColor, QFont, QIcon, QPixmap, QPainter, QBrush, QPen
 import requests
+import logging
+
 from restaurant_details import RestaurantDetailsWindow  # Импорт нового класса
+from auth import AuthWindow  # Импорт класса AuthWindow
+
+# Настройка логгера
+logger = logging.getLogger(__name__)
 
 def get_image_path(image_name):
     return os.path.join(os.path.dirname(__file__), "img", image_name)
@@ -67,13 +75,15 @@ class RestaurantButton(QPushButton):
         self.set_background_image(get_image_path(self.restaurant_info.get("restaurant_image", "")))
 
     def open_restaurant_details(self):
-        self.details_window = RestaurantDetailsWindow(self.restaurant_info, self.stacked_widget)
+        self.details_window = RestaurantDetailsWindow(self.restaurant_info, self.stacked_widget, self.main_menu_instance.auth_window)
         self.stacked_widget.addWidget(self.details_window)  # Используем переданный stacked_widget
         self.stacked_widget.setCurrentWidget(self.details_window)
 
 class MainMenu(QWidget):
-    def __init__(self):
+    def __init__(self, auth_window):
         super().__init__()
+        self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
+        logger.debug(f"MainMenu создан, self.auth_window: {self.auth_window}")
         self.setWindowTitle("Основное меню")
         self.setGeometry(100, 100, 800, 600)
 
@@ -261,6 +271,17 @@ class MainMenu(QWidget):
             button.setFixedWidth(int(self.width() * 0.75))
 
     def go_to_home(self):
-        from auth import AuthWindow
-        self.auth_window = AuthWindow()
-        self.auth_window.layout.setCurrentWidget(self.auth_window)
+        if self.auth_window:
+            logger.debug(f"Состояние окна аутентификации: isVisible={self.auth_window.isVisible()}, isWidgetType={self.auth_window.isWidgetType()}, parent={self.auth_window.parent()}")
+            if not self.auth_window.isVisible():
+                logger.debug("Окно аутентификации было скрыто, показываем его снова.")
+                self.auth_window.show()
+            else:
+                logger.debug("Окно аутентификации уже видимо.")
+            self.hide()
+        else:
+            logger.error("self.auth_window не существует")
+            QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")
+            # Создаем новое окно аутентификации
+            self.auth_window = AuthWindow()
+            self.auth_window.show()

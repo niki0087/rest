@@ -1,10 +1,18 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout, QMessageBox, QInputDialog)
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout, QMessageBox, QInputDialog
+)
 from PyQt5.QtGui import QPalette, QColor
 import requests
+import logging
+
+# Настройка логгера
+logger = logging.getLogger(__name__)
 
 class AdminWindow(QWidget):
-    def __init__(self):
+    def __init__(self, auth_window):
         super().__init__()
+        self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
+        logger.debug("AdminWindow создан")
         self.setWindowTitle("Окно администратора")
         self.setGeometry(100, 100, 800, 600)
 
@@ -94,6 +102,18 @@ class AdminWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Выберите пользователя для изменения роли.")
 
     def go_to_home(self):
-        from auth import AuthWindow
-        self.auth_window = AuthWindow()
-        self.auth_window.layout.setCurrentWidget(self.auth_window)
+        if self.auth_window:
+            logger.debug(f"Состояние окна аутентификации: isVisible={self.auth_window.isVisible()}, isWidgetType={self.auth_window.isWidgetType()}, parent={self.auth_window.parent()}")
+            if not self.auth_window.isVisible():
+                logger.debug("Окно аутентификации было скрыто, показываем его снова.")
+                self.auth_window.show()
+            else:
+                logger.debug("Окно аутентификации уже видимо.")
+            self.hide()
+        else:
+            logger.error("self.auth_window не существует")
+            QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")
+            # Создаем новое окно аутентификации
+            from auth import AuthWindow  # Ленивый импорт
+            self.auth_window = AuthWindow()
+            self.auth_window.show()

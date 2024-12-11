@@ -1,10 +1,17 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QSpacerItem, QSizePolicy, QStackedLayout, QMessageBox)
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QSpacerItem, QSizePolicy, QStackedLayout, QMessageBox
+)
 from PyQt5.QtGui import QPalette, QColor, QFont
 import requests
+import logging
+
+# Настройка логгера
+logger = logging.getLogger(__name__)
 
 class AuthWindow(QWidget):
     def __init__(self):
         super().__init__()
+        logger.debug("AuthWindow создан")  # Отладочное сообщение
         self.setWindowTitle("Аутентификация")
         self.setGeometry(100, 100, 800, 600)
 
@@ -16,6 +23,7 @@ class AuthWindow(QWidget):
         self.setLayout(self.layout)
 
         self.registration_form()
+        self.login_form()
 
     def create_custom_widget(self, widget):
         widget.setStyleSheet("""
@@ -114,8 +122,6 @@ class AuthWindow(QWidget):
         self.layout.setCurrentIndex(0)
 
     def show_login_form(self):
-        if not hasattr(self, 'login_email_input'):
-            self.login_form()
         self.layout.setCurrentIndex(1)
 
     def register(self):
@@ -157,20 +163,20 @@ class AuthWindow(QWidget):
                 role = response.json().get("role", "user")
                 QMessageBox.information(self, "Успех", f"Вы вошли как {role}!")
                 if role == "admin":
-                    from admin import AdminWindow
-                    self.admin_window = AdminWindow()
-                    self.layout.addWidget(self.admin_window)
-                    self.layout.setCurrentWidget(self.admin_window)
+                    from admin import AdminWindow  # Ленивый импорт
+                    self.admin_window = AdminWindow(self)
+                    self.admin_window.show()  # Показываем новое окно
+                    self.hide()  # Скрываем окно аутентификации
                 elif role == "restaurant":
-                    from restaurant import RestaurantWindow
-                    self.restaurant_window = RestaurantWindow(email)
-                    self.layout.addWidget(self.restaurant_window)
-                    self.layout.setCurrentWidget(self.restaurant_window)
+                    from restaurant import RestaurantWindow  # Ленивый импорт
+                    self.restaurant_window = RestaurantWindow(email, self)
+                    self.restaurant_window.show()  # Показываем новое окно
+                    self.hide()  # Скрываем окно аутентификации
                 else:
-                    from main_menu import MainMenu
-                    self.main_menu = MainMenu()
-                    self.layout.addWidget(self.main_menu)
-                    self.layout.setCurrentWidget(self.main_menu)
+                    from main_menu import MainMenu  # Ленивый импорт
+                    self.main_menu = MainMenu(self)
+                    self.main_menu.show()  # Показываем новое окно
+                    self.hide()  # Скрываем окно аутентификации
             else:
                 QMessageBox.warning(self, "Ошибка", response.text)
         except requests.exceptions.RequestException as e:

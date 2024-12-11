@@ -1,12 +1,20 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit, QFileDialog, QMessageBox, QListWidget, QListWidgetItem, QHBoxLayout)
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit, QFileDialog, QMessageBox, QListWidget, QListWidgetItem, QHBoxLayout
+)
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap
 from PyQt5.QtCore import Qt
 import requests
 import base64
+import logging
+
+# Настройка логгера
+logger = logging.getLogger(__name__)
 
 class MenuEditorWindow(QWidget):
-    def __init__(self, restaurant_email, menu=None):
+    def __init__(self, restaurant_email, menu=None, auth_window=None):
         super().__init__()
+        self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
+        logger.debug("MenuEditorWindow создан")
         self.setWindowTitle("Редактор меню")
         self.setGeometry(100, 100, 800, 600)
         self.restaurant_email = restaurant_email
@@ -52,6 +60,10 @@ class MenuEditorWindow(QWidget):
         self.save_button = self.create_custom_widget(QPushButton("Сохранить изменения", self))
         self.save_button.clicked.connect(self.save_menu)
         button_layout.addWidget(self.save_button)
+
+        self.home_button = QPushButton("На главную")
+        self.home_button.clicked.connect(self.go_to_home)
+        button_layout.addWidget(self.home_button)
 
         layout.addWidget(self.name_label)
         layout.addWidget(self.name_input)
@@ -163,3 +175,12 @@ class MenuEditorWindow(QWidget):
                 QMessageBox.warning(self, "Ошибка", "Не удалось загрузить меню.")
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+
+    def go_to_home(self):
+        if self.auth_window:
+            logger.debug("self.auth_window существует и будет показан")
+            self.auth_window.show()
+            self.hide()
+        else:
+            logger.error("self.auth_window не существует")
+            QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")

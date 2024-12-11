@@ -1,11 +1,20 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox, QTextEdit, QFileDialog)
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox, QTextEdit, QFileDialog
+)
 from PyQt5.QtGui import QPalette, QColor, QFont
 import requests
+import logging
 from menu_editor import MenuEditorWindow  # Импорт нового класса
+from auth import AuthWindow  # Импорт класса AuthWindow
+
+# Настройка логгера
+logger = logging.getLogger(__name__)
 
 class RestaurantWindow(QWidget):
-    def __init__(self, user_email):
+    def __init__(self, user_email, auth_window):
         super().__init__()
+        self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
+        logger.debug("RestaurantWindow создан")
         self.setWindowTitle("Окно ресторана")
         self.setGeometry(100, 100, 800, 600)
         self.user_email = user_email
@@ -155,7 +164,7 @@ class RestaurantWindow(QWidget):
         menu = self.load_menu(restaurant_id)
 
         # Открытие окна редактора меню
-        self.menu_editor_window = MenuEditorWindow(self.user_email, menu)
+        self.menu_editor_window = MenuEditorWindow(self.user_email, menu, self.auth_window)
         self.layout.addWidget(self.menu_editor_window)
         self.layout.setCurrentWidget(self.menu_editor_window)
 
@@ -186,6 +195,17 @@ class RestaurantWindow(QWidget):
         return []
 
     def go_to_home(self):
-        from auth import AuthWindow
-        self.auth_window = AuthWindow()
-        self.auth_window.layout.setCurrentWidget(self.auth_window)
+        if self.auth_window:
+            logger.debug(f"Состояние окна аутентификации: isVisible={self.auth_window.isVisible()}, isWidgetType={self.auth_window.isWidgetType()}, parent={self.auth_window.parent()}")
+            if not self.auth_window.isVisible():
+                logger.debug("Окно аутентификации было скрыто, показываем его снова.")
+                self.auth_window.show()
+            else:
+                logger.debug("Окно аутентификации уже видимо.")
+            self.hide()
+        else:
+            logger.error("self.auth_window не существует")
+            QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")
+            # Создаем новое окно аутентификации
+            self.auth_window = AuthWindow()
+            self.auth_window.show()

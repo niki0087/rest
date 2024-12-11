@@ -9,8 +9,9 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class RestaurantDetailsWindow(QWidget):
-    def __init__(self, restaurant_info, stacked_widget):
+    def __init__(self, restaurant_info, stacked_widget, auth_window):
         super().__init__()
+        self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
         self.setWindowTitle(f"Детали ресторана: {restaurant_info.get('name', 'Неизвестный ресторан')}")
         self.setGeometry(100, 100, 800, 600)
 
@@ -114,6 +115,5 @@ class RestaurantDetailsWindow(QWidget):
         QMessageBox.information(self, "Свободные столики", "Функционал свободных столиков будет реализован позже.")
 
     def go_to_home(self):
-        from auth import AuthWindow
-        self.auth_window = AuthWindow()
-        self.auth_window.layout.setCurrentWidget(self.auth_window)
+        self.auth_window.show()  # Показываем окно аутентификации
+        self.hide()  # Скрываем текущее окно

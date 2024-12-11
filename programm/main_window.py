@@ -262,4 +262,4 @@ class MainMenu(QWidget):
         from auth import AuthWindow
         self.auth_window = AuthWindow()
         self.auth_window.show()
-        self.close()
+        self.hide()
