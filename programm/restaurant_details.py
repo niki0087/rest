@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLay
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap
 from PyQt5.QtCore import Qt
 from menu_window import MenuWindow  # Импорт нового класса
+from seating_window import SeatingWindow  # Импорт нового класса
 import requests
 import logging
 
@@ -111,8 +112,10 @@ class RestaurantDetailsWindow(QWidget):
         self.stacked_widget.setCurrentWidget(self.menu_window)
 
     def open_tables(self):
-        # Логика открытия свободных столиков
-        QMessageBox.information(self, "Свободные столики", "Функционал свободных столиков будет реализован позже.")
+        """Открывает окно со свободными столиками."""
+        self.seating_window = SeatingWindow(self.restaurant_info.get("restaurant_id"), "Основной зал", self.auth_window)
+        self.stacked_widget.addWidget(self.seating_window)
+        self.stacked_widget.setCurrentWidget(self.seating_window)
 
     def go_to_home(self):
         self.auth_window.show()  # Показываем окно аутентификации

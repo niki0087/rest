@@ -5,6 +5,7 @@ import firebirdsql
 import bcrypt
 import logging
 import base64
+from datetime import datetime
 
 # Настройки подключения к базе данных Firebird
 DB_HOST = "localhost"
@@ -54,6 +55,10 @@ class SeatingRequest(BaseModel):
     table_number: int = Field(..., description="Номер столика")
     capacity: int = Field(..., description="Количество мест")
     layout: str = Field(..., description="Расположение столика")
+
+class ReservationRequest(BaseModel):
+    reservation_time: str
+    user_email: str
 
 def get_db_connection():
     """Функция для подключения к базе данных."""
@@ -105,20 +110,11 @@ async def register(user: User):
         if count > 0:
             raise HTTPException(status_code=400, detail="Пользователь с таким email уже существует")
 
-        # Проверка существования администратора
-        cursor.execute("SELECT COUNT(*) FROM users WHERE LOWER(name) = 'admin' AND role = 'admin'")
-        admin_count = cursor.fetchone()[0]
-        if user.name.lower() == "admin" and admin_count > 0:
-            raise HTTPException(status_code=400, detail="Пользователь с ролью admin уже существует")
-
         # Хеширование пароля
         password_hash = hash_password(user.password)
 
         # Создание нового пользователя с ролью user по умолчанию
         role = user.role if user.role else "user"
-        if user.name.lower() == "admin":
-            role = "admin"  # Присваиваем роль admin, если имя admin
-
         cursor.execute("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
                        (user.name, user.email, password_hash, role))
         conn.commit()
@@ -604,6 +600,74 @@ async def delete_seating(email: str, table_number: int):
         cursor.close()
         conn.close()
 
+@app.get("/seating/{restaurant_id}/{layout_name}/")
+async def get_seating(restaurant_id: int, layout_name: str):
+    """Маршрут для получения информации о столиках."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT TABLE_NUMBER, CAPACITY, STATUS
+            FROM SEATING_CHARTS
+            WHERE RESTAURANT_ID = ? AND LAYOUT = ?
+        """, (restaurant_id, layout_name))
+        seating = cursor.fetchall()
+        return [{"table_number": table[0], "capacity": table[1], "status": table[2]} for table in seating]
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении данных о столиках: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении данных о столиках")
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.post("/seating/{restaurant_id}/{table_number}/")
+async def reserve_table(restaurant_id: int, table_number: int, request: ReservationRequest):
+    """Маршрут для бронирования столика."""
+    logger.debug(f"Reservation request received: restaurant_id={restaurant_id}, table_number={table_number}, reservation_time={request.reservation_time}, user_email={request.user_email}")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка существования столика
+        cursor.execute("""
+            SELECT SEATING_CHART_ID, STATUS
+            FROM SEATING_CHARTS
+            WHERE RESTAURANT_ID = ? AND TABLE_NUMBER = ?
+        """, (restaurant_id, table_number))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Столик не найден")
+
+        seating_chart_id, status = result
+        if status is not None:
+            raise HTTPException(status_code=400, detail="Столик уже забронирован")
+
+        # Получение ID пользователя
+        cursor.execute("SELECT USER_ID FROM users WHERE email = ?", (request.user_email,))
+        user_id = cursor.fetchone()
+        if not user_id:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user_id = user_id[0]
+
+        # Преобразование строки даты и времени в формат Firebird
+        reservation_time = datetime.fromisoformat(request.reservation_time).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Обновление статуса столика
+        cursor.execute("""
+            UPDATE SEATING_CHARTS
+            SET STATUS = TRUE, RESERVATION_TIME = ?, USER_ID = ?
+            WHERE SEATING_CHART_ID = ?
+        """, (reservation_time, user_id, seating_chart_id))
+        conn.commit()
+
+        return {"message": "Столик успешно забронирован"}
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при бронировании столика: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при бронировании столика")
+    finally:
+        cursor.close()
+        conn.close()
+        
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
