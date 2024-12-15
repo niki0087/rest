@@ -89,7 +89,19 @@ class RestaurantWindow(QWidget):
         self.photo_label.setStyleSheet("color: #000000;")
         self.photo_input = self.create_custom_widget(QLineEdit(self))
         self.photo_button = self.create_custom_widget(QPushButton("Выбрать фото", self))
-        self.photo_button.clicked.connect(self.select_photo)
+        self.photo_button.clicked.connect(self.select_photo)  # Подключаем метод select_photo
+
+        self.average_bill_label = QLabel("Средний чек:")
+        self.average_bill_label.setStyleSheet("color: #000000;")
+        self.average_bill_input = self.create_custom_widget(QLineEdit(self))
+
+        self.phone_number_label = QLabel("Номер телефона:")
+        self.phone_number_label.setStyleSheet("color: #000000;")
+        self.phone_number_input = self.create_custom_widget(QLineEdit(self))
+
+        self.opening_hours_label = QLabel("Часы работы:")
+        self.opening_hours_label.setStyleSheet("color: #000000;")
+        self.opening_hours_input = self.create_custom_widget(QLineEdit(self))
 
         self.save_button = self.create_custom_widget(QPushButton("Сохранить", self))
         self.save_button.clicked.connect(self.save_restaurant)
@@ -122,6 +134,15 @@ class RestaurantWindow(QWidget):
         layout.addWidget(self.photo_label)
         layout.addWidget(self.photo_input)
         layout.addWidget(self.photo_button)
+
+        layout.addWidget(self.average_bill_label)
+        layout.addWidget(self.average_bill_input)
+
+        layout.addWidget(self.phone_number_label)
+        layout.addWidget(self.phone_number_input)
+
+        layout.addWidget(self.opening_hours_label)
+        layout.addWidget(self.opening_hours_input)
 
         layout.addWidget(self.save_button)
         layout.addWidget(self.menu_button)
@@ -179,6 +200,7 @@ class RestaurantWindow(QWidget):
         return screen
 
     def select_photo(self):
+        """Открывает диалоговое окно для выбора файла изображения."""
         file_name, _ = QFileDialog.getOpenFileName(self, "Выбрать фото", "", "Images (*.png *.xpm *.jpg)")
         if file_name:
             self.photo_input.setText(file_name)
@@ -195,6 +217,9 @@ class RestaurantWindow(QWidget):
                 self.cuisine_combo.setCurrentText(restaurant.get("cuisine_type", ""))
                 self.description_input.setPlainText(restaurant.get("description", ""))
                 self.photo_input.setText(restaurant.get("restaurant_image", ""))
+                self.average_bill_input.setText(str(restaurant.get("average_bill", "")))
+                self.phone_number_input.setText(restaurant.get("phone_number", ""))
+                self.opening_hours_input.setText(restaurant.get("opening_hours", ""))
             else:
                 QMessageBox.warning(self, "Ошибка", "Не удалось загрузить данные ресторана.")
         except requests.exceptions.RequestException as e:
@@ -207,6 +232,9 @@ class RestaurantWindow(QWidget):
         cuisine_type = self.cuisine_combo.currentText()
         description = self.description_input.toPlainText()
         restaurant_image = self.photo_input.text()
+        average_bill = self.average_bill_input.text()
+        phone_number = self.phone_number_input.text()
+        opening_hours = self.opening_hours_input.text()
 
         if not name or not address or not city or not cuisine_type:
             QMessageBox.warning(self, "Ошибка", "Пожалуйста, заполните обязательные поля.")
@@ -218,7 +246,10 @@ class RestaurantWindow(QWidget):
             "city": city,
             "cuisine_type": cuisine_type,
             "description": description,
-            "restaurant_image": restaurant_image
+            "restaurant_image": restaurant_image,
+            "average_bill": float(average_bill) if average_bill else None,
+            "phone_number": phone_number,
+            "opening_hours": opening_hours
         }
 
         url = f"http://localhost:8000/restaurant/{self.user_email}/"
@@ -230,7 +261,7 @@ class RestaurantWindow(QWidget):
                 QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить данные ресторана: {response.text}")
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
-
+                                    
     def open_menu_editor(self):
         # Загрузка данных ресторана
         restaurant_id = self.get_restaurant_id()

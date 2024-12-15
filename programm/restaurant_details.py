@@ -70,9 +70,10 @@ class RestaurantDetailsWindow(QWidget):
         self.tables_button.clicked.connect(self.open_tables)
         button_layout.addWidget(self.tables_button)
 
-        self.home_button = QPushButton("На главную")
-        self.home_button.clicked.connect(self.go_to_home)
-        button_layout.addWidget(self.home_button)
+        # Удаляем кнопку "На главную"
+        # self.home_button = QPushButton("На главную")
+        # self.home_button.clicked.connect(self.go_to_home)
+        # button_layout.addWidget(self.home_button)
 
         self.layout.addLayout(button_layout)
 

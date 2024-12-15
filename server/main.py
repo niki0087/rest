@@ -21,7 +21,7 @@ app = FastAPI()
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Модель для приема данных от клиента
+# Модели для приема данных от клиента
 class User(BaseModel):
     name: str
     email: str
@@ -42,8 +42,13 @@ class Restaurant(BaseModel):
     address: str = Field(..., description="Адрес ресторана")
     city: str = Field(..., description="Город")
     cuisine_type: str = Field(..., description="Вид кухни")
+    phone_number: Optional[str] = Field(None, description="Номер телефона")
+    email: Optional[str] = Field(None, description="Email ресторана")
+    rating: Optional[float] = Field(None, description="Рейтинг ресторана")
     description: Optional[str] = Field(None, description="Описание ресторана")
     restaurant_image: Optional[str] = Field(None, description="Фотография ресторана")
+    opening_hours: Optional[str] = Field(None, description="Часы работы")
+    average_bill: Optional[float] = Field(None, description="Средний чек")
 
 class MenuItem(BaseModel):
     name: str = Field(..., description="Название блюда")
@@ -106,6 +111,7 @@ def is_valid_iso_format(time_str: str) -> bool:
     except ValueError:
         return False
 
+# Маршруты для работы с пользователями
 @app.post("/register/")
 async def register(user: User):
     """Маршрут для регистрации пользователя."""
@@ -260,6 +266,7 @@ async def delete_user(email: str, admin_email: str):
         cursor.close()
         conn.close()
 
+# Маршруты для работы с ресторанами
 @app.post("/restaurant/{email}/")
 async def create_or_update_restaurant(
     email: str,
@@ -267,8 +274,12 @@ async def create_or_update_restaurant(
     address: str = Form(...),
     city: str = Form(...),
     cuisine_type: str = Form(...),
+    phone_number: Optional[str] = Form(None),
+    rating: Optional[float] = Form(None),
     description: Optional[str] = Form(None),
-    restaurant_image: Optional[str] = Form(None)
+    restaurant_image: Optional[str] = Form(None),
+    opening_hours: Optional[str] = Form(None),
+    average_bill: Optional[float] = Form(None)
 ):
     """Маршрут для создания или обновления ресторана."""
     conn = get_db_connection()
@@ -289,17 +300,17 @@ async def create_or_update_restaurant(
             # Обновление ресторана
             cursor.execute("""
                 UPDATE restaurants
-                SET name = ?, address = ?, city = ?, cuisine_type = ?, description = ?, restaurant_image = ?
+                SET name = ?, address = ?, city = ?, cuisine_type = ?, phone_number = ?, rating = ?, description = ?, restaurant_image = ?, opening_hours = ?, average_bill = ?
                 WHERE email = ?
-            """, (name, address, city, cuisine_type, description, restaurant_image, email))
+            """, (name, address, city, cuisine_type, phone_number, rating, description, restaurant_image, opening_hours, average_bill, email))
         else:
             # Создание нового ресторана
             cursor.execute("SELECT GEN_ID(restaurant_id_seq, 1) FROM RDB$DATABASE")
             restaurant_id = cursor.fetchone()[0]
             cursor.execute("""
-                INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, description, restaurant_image, email)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (restaurant_id, name, address, city, cuisine_type, description, restaurant_image, email))
+                INSERT INTO restaurants (RESTAURANT_ID, name, address, city, cuisine_type, phone_number, email, rating, description, restaurant_image, opening_hours, average_bill)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (restaurant_id, name, address, city, cuisine_type, phone_number, email, rating, description, restaurant_image, opening_hours, average_bill))
 
         conn.commit()
 
@@ -321,7 +332,7 @@ async def get_restaurant(email: str):
     try:
         # Проверка существования ресторана
         cursor.execute("""
-            SELECT name, address, city, cuisine_type, description, restaurant_image, restaurant_id 
+            SELECT RESTAURANT_ID, NAME, ADDRESS, CITY, CUISINE_TYPE, PHONE_NUMBER, EMAIL, RATING, DESCRIPTION, RESTAURANT_IMAGE, OPENING_HOURS, AVERAGE_BILL
             FROM restaurants
             WHERE email = ?
         """, (email,))
@@ -330,13 +341,18 @@ async def get_restaurant(email: str):
             raise HTTPException(status_code=404, detail="Данные о ресторане не найдены")
 
         return {
-            "restaurant_id": result[6],
-            "name": result[0],
-            "address": result[1],
-            "city": result[2],
-            "cuisine_type": result[3],
-            "description": result[4],
-            "restaurant_image": result[5]
+            "restaurant_id": result[0],
+            "name": result[1],
+            "address": result[2],
+            "city": result[3],
+            "cuisine_type": result[4],
+            "phone_number": result[5],
+            "email": result[6],
+            "rating": result[7],
+            "description": result[8],
+            "restaurant_image": result[9],
+            "opening_hours": result[10],
+            "average_bill": result[11]
         }
 
     except firebirdsql.Error as e:
@@ -346,14 +362,13 @@ async def get_restaurant(email: str):
     finally:
         cursor.close()
         conn.close()
-
+        
 @app.get("/filter-restaurants/")
 async def filter_restaurants(
     rating: Optional[float] = Query(None, description="Рейтинг ресторана"),
     cuisine_type: Optional[str] = Query(None, description="Тип кухни"),
     average_bill_min: Optional[float] = Query(None, description="Минимальный средний чек"),
     average_bill_max: Optional[float] = Query(None, description="Максимальный средний чек"),
-    opening_hours: Optional[str] = Query(None, description="Часы работы"),
     city: Optional[str] = Query(None, description="Город")
 ):
     """Маршрут для фильтрации ресторанов по различным параметрам."""
@@ -362,35 +377,30 @@ async def filter_restaurants(
     cursor = conn.cursor()
     try:
         query = """
-            SELECT r.name, r.address, r.city, r.cuisine_type, r.rating, r.restaurant_image, rs.opening_hours, r.description, rs.average_bill, r.restaurant_id 
-            FROM restaurants r
-            LEFT JOIN restaurant_settings rs ON r.RESTAURANT_ID = rs.restaurant_id
+            SELECT RESTAURANT_ID, NAME, ADDRESS, CITY, CUISINE_TYPE, RATING, RESTAURANT_IMAGE, DESCRIPTION, AVERAGE_BILL
+            FROM RESTAURANTS
             WHERE 1=1
         """
         params = []
 
         if rating is not None:
-            query += " AND r.rating = ?"
+            query += " AND RATING = ?"
             params.append(rating)
 
         if cuisine_type is not None:
-            query += " AND r.cuisine_type = ?"
+            query += " AND CUISINE_TYPE = ?"
             params.append(cuisine_type)
 
         if average_bill_min is not None:
-            query += " AND rs.average_bill >= ?"
+            query += " AND AVERAGE_BILL >= ?"
             params.append(average_bill_min)
 
         if average_bill_max is not None:
-            query += " AND rs.average_bill <= ?"
+            query += " AND AVERAGE_BILL <= ?"
             params.append(average_bill_max)
 
-        if opening_hours is not None:
-            query += " AND rs.opening_hours = ?"
-            params.append(opening_hours)
-
         if city is not None:
-            query += " AND UPPER(r.city) = ?"
+            query += " AND UPPER(CITY) = ?"
             params.append(city.upper())
 
         cursor.execute(query, params)
@@ -398,14 +408,13 @@ async def filter_restaurants(
 
         return [
             {
-                "restaurant_id": restaurant[9],
-                "name": restaurant[0],
-                "address": restaurant[1],
-                "city": restaurant[2],
-                "cuisine_type": restaurant[3],
-                "rating": restaurant[4],
-                "restaurant_image": restaurant[5],
-                "opening_hours": restaurant[6],
+                "restaurant_id": restaurant[0],
+                "name": restaurant[1],
+                "address": restaurant[2],
+                "city": restaurant[3],
+                "cuisine_type": restaurant[4],
+                "rating": restaurant[5],
+                "restaurant_image": restaurant[6],
                 "description": restaurant[7],
                 "average_bill": restaurant[8]
             }
@@ -420,6 +429,7 @@ async def filter_restaurants(
         cursor.close()
         conn.close()
 
+# Маршруты для работы с меню ресторана
 @app.get("/menu/{restaurant_id}/")
 async def get_menu(restaurant_id: int):
     """Маршрут для получения меню ресторана."""
@@ -542,6 +552,7 @@ async def delete_dish(email: str, dish_name: str):
         cursor.close()
         conn.close()
 
+# Маршруты для работы с бронированием столиков
 @app.post("/seating/{email}/")
 async def create_seating(email: str, seating: SeatingRequest):
     """Маршрут для добавления столика."""
@@ -710,7 +721,7 @@ async def reserve_table(restaurant_id: int, request: ReservationRequest):
     finally:
         cursor.close()
         conn.close()
-                                        
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
