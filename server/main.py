@@ -742,6 +742,99 @@ async def get_reservations(user_email: str):
         cursor.close()
         conn.close()
 
+@app.post("/reviews/{restaurant_id}/")
+async def create_review(restaurant_id: int, request: dict):
+    """Маршрут для создания отзыва."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Получение обязательных полей
+        rating = request.get("rating")
+        comment = request.get("comment")
+        created_at = request.get("created_at")
+        user_email = request.get("user_email")
+
+        # Проверка, что все обязательные поля переданы
+        if not rating or not comment or not created_at or not user_email:
+            raise HTTPException(status_code=400, detail="Не все обязательные поля переданы")
+
+        # Проверка, что рейтинг находится в допустимом диапазоне (1-5)
+        if not (1 <= rating <= 5):
+            raise HTTPException(status_code=400, detail="Рейтинг должен быть в диапазоне от 1 до 5")
+
+        # Проверка, что время в правильном формате
+        try:
+            created_at_datetime = datetime.fromisoformat(created_at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Неверный формат времени. Ожидается ISO 8601")
+
+        # Получение ID пользователя
+        cursor.execute("SELECT USER_ID FROM users WHERE email = ?", (user_email,))
+        user_id = cursor.fetchone()
+        if not user_id:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user_id = user_id[0]
+
+        # Генерация уникального идентификатора для отзыва
+        cursor.execute("SELECT GEN_ID(review_id_seq, 1) FROM RDB$DATABASE")
+        review_id = cursor.fetchone()[0]
+
+        # Добавление отзыва в базу данных
+        cursor.execute("""
+            INSERT INTO REVIEWS (REVIEW_ID, USER_ID, RESTAURANT_ID, RATING, COMMENT, CREATED_AT)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (review_id, user_id, restaurant_id, rating, comment, created_at_datetime))
+
+        # Расчет нового среднего рейтинга для ресторана
+        cursor.execute("""
+            SELECT AVG(RATING) FROM REVIEWS WHERE RESTAURANT_ID = ?
+        """, (restaurant_id,))
+        avg_rating = cursor.fetchone()[0]
+
+        # Обновление рейтинга ресторана
+        cursor.execute("""
+            UPDATE RESTAURANTS SET RATING = ? WHERE RESTAURANT_ID = ?
+        """, (avg_rating, restaurant_id))
+
+        conn.commit()
+
+        return {"message": "Отзыв успешно добавлен", "new_rating": avg_rating}
+    except HTTPException as http_exc:
+        # Если ошибка уже обработана, просто пробрасываем её дальше
+        raise http_exc
+    except firebirdsql.Error as fb_error:
+        # Обработка ошибок Firebird
+        logger.error(f"Ошибка Firebird при добавлении отзыва: {fb_error}")
+        raise HTTPException(status_code=500, detail="Ошибка базы данных при добавлении отзыва")
+    except Exception as e:
+        # Обработка других исключений
+        logger.error(f"Неизвестная ошибка при добавлении отзыва: {e}")
+        raise HTTPException(status_code=500, detail="Произошла ошибка при добавлении отзыва. Пожалуйста, попробуйте позже.")
+    finally:
+        cursor.close()
+        conn.close()
+                
+@app.get("/reviews/{restaurant_id}/")
+async def get_reviews(restaurant_id: int):
+    """Маршрут для получения отзывов ресторана."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT RATING, COMMENT, CREATED_AT
+            FROM REVIEWS
+            WHERE RESTAURANT_ID = ?
+        """, (restaurant_id,))
+        reviews = cursor.fetchall()
+        return [{"rating": review[0], "comment": review[1], "created_at": review[2].isoformat()} for review in reviews]
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении отзывов: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении отзывов")
+    finally:
+        cursor.close()
+        conn.close()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

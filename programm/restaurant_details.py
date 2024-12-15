@@ -1,8 +1,11 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QMessageBox, QTextEdit, QScrollArea, QStackedWidget)
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QMessageBox, QTextEdit, QScrollArea, QStackedWidget
+)
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap
 from PyQt5.QtCore import Qt
 from menu_window import MenuWindow  # Импорт нового класса
 from seating_window import SeatingWindow  # Импорт нового класса
+from review_window import ReviewWindow  # Импорт нового класса
 import requests
 import logging
 
@@ -45,6 +48,18 @@ class RestaurantDetailsWindow(QWidget):
         self.average_bill_label.setStyleSheet("color: #000000; font-size: 16px; font-weight: bold;")
         self.layout.addWidget(self.average_bill_label)
 
+        # Кнопка "Отзывы"
+        self.reviews_button = QPushButton("Отзывы")
+        self.reviews_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+        self.reviews_button.clicked.connect(self.open_reviews)
+        self.layout.addWidget(self.reviews_button)
+
         # Кнопки
         button_layout = QHBoxLayout()
 
@@ -69,11 +84,6 @@ class RestaurantDetailsWindow(QWidget):
         """)
         self.tables_button.clicked.connect(self.open_tables)
         button_layout.addWidget(self.tables_button)
-
-        # Удаляем кнопку "На главную"
-        # self.home_button = QPushButton("На главную")
-        # self.home_button.clicked.connect(self.go_to_home)
-        # button_layout.addWidget(self.home_button)
 
         self.layout.addLayout(button_layout)
 
@@ -117,6 +127,12 @@ class RestaurantDetailsWindow(QWidget):
         self.seating_window = SeatingWindow(self.restaurant_info.get("restaurant_id"), "Основной зал", self.auth_window)
         self.stacked_widget.addWidget(self.seating_window)
         self.stacked_widget.setCurrentWidget(self.seating_window)
+
+    def open_reviews(self):
+        """Открывает окно с отзывами."""
+        self.review_window = ReviewWindow(self.restaurant_info.get("restaurant_id"), self.auth_window)
+        self.stacked_widget.addWidget(self.review_window)
+        self.stacked_widget.setCurrentWidget(self.review_window)
 
     def go_to_home(self):
         self.auth_window.show()  # Показываем окно аутентификации
