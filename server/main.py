@@ -362,7 +362,7 @@ async def get_restaurant(email: str):
     finally:
         cursor.close()
         conn.close()
-        
+
 @app.get("/filter-restaurants/")
 async def filter_restaurants(
     rating: Optional[float] = Query(None, description="Рейтинг ресторана"),
@@ -718,6 +718,26 @@ async def reserve_table(restaurant_id: int, request: ReservationRequest):
         # Обработка других исключений
         logger.error(f"Неизвестная ошибка при бронировании столика: {e}")
         raise HTTPException(status_code=500, detail="Произошла ошибка при бронировании столика. Пожалуйста, попробуйте позже.")
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/reservations/")
+async def get_reservations(user_email: str):
+    """Маршрут для получения бронирований пользователя."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT TABLE_NUMBER, RESERVATION_TIME
+            FROM SEATING_CHARTS
+            WHERE USER_ID = (SELECT USER_ID FROM users WHERE email = ?)
+        """, (user_email,))
+        reservations = cursor.fetchall()
+        return [{"table_number": res[0], "reservation_time": res[1].isoformat()} for res in reservations]
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении бронирований: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении бронирований")
     finally:
         cursor.close()
         conn.close()

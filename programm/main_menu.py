@@ -93,6 +93,9 @@ class MainMenu(QWidget):
 
         main_layout = QVBoxLayout()
 
+        # Создаем горизонтальный макет для кнопок "Фильтр" и "Мои брони"
+        button_layout = QHBoxLayout()
+
         self.filter_button = QPushButton()
         self.filter_button.setIcon(QIcon(get_image_path("filter-list-svgrepo-com1.svg")))
         self.filter_button.setStyleSheet("""
@@ -105,8 +108,22 @@ class MainMenu(QWidget):
             min-height: 50px;
         """)
         self.filter_button.clicked.connect(self.toggle_filter_menu)
+        button_layout.addWidget(self.filter_button)
 
-        main_layout.addWidget(self.filter_button, alignment=Qt.AlignTop | Qt.AlignRight)
+        self.my_reservations_button = QPushButton("Мои брони")
+        self.my_reservations_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 5px;
+            min-width: 100px;
+            min-height: 50px;
+        """)
+        self.my_reservations_button.clicked.connect(self.toggle_reservations_menu)
+        button_layout.addWidget(self.my_reservations_button)
+
+        main_layout.addLayout(button_layout)
 
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
@@ -118,10 +135,12 @@ class MainMenu(QWidget):
         self.setLayout(main_layout)
 
         self.create_filter_menu()
+        self.create_reservations_menu()
         self.create_restaurant_layout()
 
         self.filter_restaurants()
-        self.is_filter_menu_open = False  # Добавляем флаг для отслеживания состояния меню фильтров
+        self.is_filter_menu_open = False  # Флаг для отслеживания состояния меню фильтров
+        self.is_reservations_menu_open = False  # Флаг для отслеживания состояния меню бронирований
 
     def create_filter_menu(self):
         self.filter_menu = QWidget(self)
@@ -186,6 +205,36 @@ class MainMenu(QWidget):
         self.filter_animation.setDuration(600)
         self.filter_animation.setEasingCurve(QEasingCurve.InOutQuad)
 
+    def create_reservations_menu(self):
+        self.reservations_menu = QWidget(self)
+        self.reservations_menu.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+        self.reservations_menu.setGeometry(0, 0, self.width(), int(self.height() * 0.6))
+        self.reservations_menu.hide()
+
+        reservations_layout = QVBoxLayout()
+
+        self.reservations_list = QListWidget()
+        self.reservations_list.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+        reservations_layout.addWidget(self.reservations_list)
+
+        self.reservations_menu.setLayout(reservations_layout)
+
+        self.reservations_animation = QPropertyAnimation(self.reservations_menu, b"geometry")
+        self.reservations_animation.setDuration(600)
+        self.reservations_animation.setEasingCurve(QEasingCurve.InOutQuad)
+
     def create_restaurant_layout(self):
         self.restaurant_layout = QVBoxLayout()
         self.restaurant_widget = QWidget()
@@ -229,6 +278,46 @@ class MainMenu(QWidget):
 
         self.is_filter_menu_open = not self.is_filter_menu_open
 
+    def toggle_reservations_menu(self):
+        if self.is_reservations_menu_open:
+            self.reservations_animation.setStartValue(self.reservations_menu.geometry())
+            self.reservations_animation.setEndValue(QRect(
+                self.reservations_menu.x(),
+                self.reservations_menu.y(),
+                self.reservations_menu.width(),
+                0
+            ))
+            self.reservations_animation.start()
+            QTimer.singleShot(600, self.reservations_menu.hide)
+            self.stacked_widget.setCurrentIndex(0)
+        else:
+            self.reservations_menu.show()
+            self.reservations_menu.raise_()  # Поднять список бронирований на вершину иерархии
+
+            start_y = self.my_reservations_button.geometry().bottom()
+            reservations_height = int(self.height() * 0.6)
+
+            self.reservations_animation.setStartValue(QRect(
+                0,
+                start_y,
+                self.width(),
+                0
+            ))
+
+            self.reservations_animation.setEndValue(QRect(
+                0,
+                start_y,
+                self.width(),
+                reservations_height
+            ))
+            self.reservations_animation.start()
+            self.stacked_widget.setCurrentIndex(1)
+
+            # Загрузка бронирований при открытии меню
+            self.load_reservations()
+
+        self.is_reservations_menu_open = not self.is_reservations_menu_open
+
     def filter_restaurants(self):
         self.rating_filter = self.rating_combo.currentText() if self.rating_combo.currentText() != "Рейтинг" else None
         self.cuisine_type_filter = self.cuisine_type_combo.currentText() if self.cuisine_type_combo.currentText() != "Тип кухни" else None
@@ -266,6 +355,7 @@ class MainMenu(QWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.filter_menu.setGeometry(0, 0, self.width(), int(self.height() * 0.6))
+        self.reservations_menu.setGeometry(0, 0, self.width(), int(self.height() * 0.6))
         for i in range(self.restaurant_layout.count()):
             button = self.restaurant_layout.itemAt(i).widget()
             button.setFixedWidth(int(self.width() * 0.75))
@@ -285,3 +375,26 @@ class MainMenu(QWidget):
             # Создаем новое окно аутентификации
             self.auth_window = AuthWindow()
             self.auth_window.show()
+
+    def load_reservations(self):
+        """Загружает бронирования пользователя с сервера."""
+        url = "http://localhost:8000/reservations/"
+        user_email = self.auth_window.login_email_input.text()  # Получаем email пользователя
+        params = {"user_email": user_email}
+        try:
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                reservations = response.json()
+                logger.debug(f"Received reservations: {reservations}")  # Отладочный вывод
+                self.display_reservations(reservations)
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить бронирования.")
+        except requests.exceptions.RequestException as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+
+    def display_reservations(self, reservations):
+        """Отображает бронирования в списке."""
+        self.reservations_list.clear()
+        for reservation in reservations:
+            item = QListWidgetItem(f"Столик {reservation['table_number']} на {reservation['reservation_time']}")
+            self.reservations_list.addItem(item)
