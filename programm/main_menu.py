@@ -227,7 +227,21 @@ class MainMenu(QWidget):
             border-radius: 10px;
             padding: 10px;
         """)
+        self.reservations_list.itemClicked.connect(self.enable_delete_button)  # Подключаем обработчик выбора брони
         reservations_layout.addWidget(self.reservations_list)
+
+        # Добавляем кнопку "Удалить бронь"
+        self.delete_reservation_button = QPushButton("Удалить бронь")
+        self.delete_reservation_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+        self.delete_reservation_button.setEnabled(False)  # Кнопка изначально отключена
+        self.delete_reservation_button.clicked.connect(self.delete_selected_reservation)
+        reservations_layout.addWidget(self.delete_reservation_button)
 
         self.reservations_menu.setLayout(reservations_layout)
 
@@ -396,5 +410,35 @@ class MainMenu(QWidget):
         """Отображает бронирования в списке."""
         self.reservations_list.clear()
         for reservation in reservations:
+            # Проверяем, что seating_chart_id присутствует
+            if 'seating_chart_id' not in reservation:
+                logger.error(f"Отсутствует seating_chart_id в данных бронирования: {reservation}")
+                continue  # Пропускаем это бронирование
+
             item = QListWidgetItem(f"Столик {reservation['table_number']} на {reservation['reservation_time']}")
+            item.setData(Qt.UserRole, reservation['seating_chart_id'])  # Сохраняем seating_chart_id в данных элемента
             self.reservations_list.addItem(item)
+
+    def enable_delete_button(self, item):
+        """Активирует кнопку "Удалить бронь" после выбора брони."""
+        self.delete_reservation_button.setEnabled(True)
+
+    def delete_selected_reservation(self):
+        """Удаляет выбранную бронь."""
+        selected_item = self.reservations_list.currentItem()
+        if selected_item:
+            seating_chart_id = selected_item.data(Qt.UserRole)  # Получаем seating_chart_id из данных элемента
+            user_email = self.auth_window.login_email_input.text()
+
+            url = f"http://localhost:8000/reservations/{seating_chart_id}/"
+            try:
+                response = requests.delete(url, params={"user_email": user_email})
+                if response.status_code == 200:
+                    QMessageBox.information(self, "Успех", "Бронь успешно удалена.")
+                    self.load_reservations()  # Обновляем список бронирований
+                else:
+                    QMessageBox.warning(self, "Ошибка", "Не удалось удалить бронь.")
+            except requests.exceptions.RequestException as e:
+                QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Выберите бронь для удаления.")

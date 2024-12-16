@@ -735,12 +735,19 @@ async def get_reservations(user_email: str):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            SELECT TABLE_NUMBER, RESERVATION_TIME
+            SELECT SEATING_CHART_ID, TABLE_NUMBER, RESERVATION_TIME
             FROM SEATING_CHARTS
             WHERE USER_ID = (SELECT USER_ID FROM users WHERE email = ?)
         """, (user_email,))
         reservations = cursor.fetchall()
-        return [{"table_number": res[0], "reservation_time": res[1].isoformat()} for res in reservations]
+        return [
+            {
+                "seating_chart_id": res[0],  # Используем SEATING_CHART_ID
+                "table_number": res[1],
+                "reservation_time": res[2].isoformat()
+            }
+            for res in reservations
+        ]
     except firebirdsql.Error as e:
         logger.error(f"Ошибка при получении бронирований: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при получении бронирований")
@@ -748,6 +755,53 @@ async def get_reservations(user_email: str):
         cursor.close()
         conn.close()
 
+@app.delete("/reservations/{seating_chart_id}/")
+async def delete_reservation(seating_chart_id: int, user_email: str):
+    """Маршрут для удаления бронирования пользователем."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Получение ID пользователя
+        cursor.execute("SELECT USER_ID FROM users WHERE email = ?", (user_email,))
+        user_id = cursor.fetchone()
+        if not user_id:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user_id = user_id[0]
+
+        # Проверка, что бронь принадлежит пользователю
+        cursor.execute("""
+            SELECT USER_ID FROM SEATING_CHARTS WHERE SEATING_CHART_ID = ?
+        """, (seating_chart_id,))
+        reservation_user_id = cursor.fetchone()
+        if not reservation_user_id:
+            raise HTTPException(status_code=404, detail="Бронь не найдена")
+
+        reservation_user_id = reservation_user_id[0]
+
+        if reservation_user_id != user_id:
+            raise HTTPException(status_code=403, detail="Вы не можете удалить эту бронь")
+
+        # Удаление брони
+        cursor.execute("""
+            DELETE FROM SEATING_CHARTS WHERE SEATING_CHART_ID = ?
+        """, (seating_chart_id,))
+        conn.commit()
+
+        return {"message": "Бронь успешно удалена"}
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except firebirdsql.Error as fb_error:
+        logger.error(f"Ошибка Firebird при удалении брони: {fb_error}")
+        raise HTTPException(status_code=500, detail="Ошибка базы данных при удалении брони")
+    except Exception as e:
+        logger.error(f"Неизвестная ошибка при удалении брони: {e}")
+        raise HTTPException(status_code=500, detail="Произошла ошибка при удалении брони. Пожалуйста, попробуйте позже.")
+    finally:
+        cursor.close()
+        conn.close()
+        
 @app.post("/reviews/{restaurant_id}/")
 async def create_review(restaurant_id: int, request: dict):
     """Маршрут для создания отзыва."""
@@ -848,7 +902,7 @@ async def get_reviews(restaurant_id: int):
     finally:
         cursor.close()
         conn.close()
-        
+
 @app.delete("/reviews/{review_id}/")
 async def delete_review(review_id: int, user_email: str):
     """Маршрут для удаления отзыва пользователем."""
