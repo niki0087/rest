@@ -22,17 +22,45 @@ class AdminWindow(QWidget):
 
         layout = QVBoxLayout()
         self.user_list = QListWidget()
+        self.user_list.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         layout.addWidget(self.user_list)
 
         button_layout = QHBoxLayout()
         self.delete_button = QPushButton("Удалить пользователя")
         self.change_role_button = QPushButton("Изменить роль")
+        self.delete_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
+        self.change_role_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         button_layout.addWidget(self.delete_button)
         button_layout.addWidget(self.change_role_button)
 
         layout.addLayout(button_layout)
 
         self.home_button = QPushButton("На главную")
+        self.home_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         self.home_button.clicked.connect(self.go_to_home)
         layout.addWidget(self.home_button)
 

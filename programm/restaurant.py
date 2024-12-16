@@ -52,6 +52,7 @@ class RestaurantWindow(QWidget):
         self.load_restaurant()
 
     def create_custom_widget(self, widget):
+        """Создает виджет с единообразным стилем."""
         widget.setStyleSheet("""
             background-color: #CCFFCC;
             color: #000000;
@@ -116,11 +117,13 @@ class RestaurantWindow(QWidget):
         self.seating_button = self.create_custom_widget(QPushButton("Редактировать посадку", self))
         self.seating_button.clicked.connect(self.open_seating_editor)
 
-        self.reservations_button = QPushButton("Посмотреть брони")
+        # Кнопка "Посмотреть брони"
+        self.reservations_button = self.create_custom_widget(QPushButton("Посмотреть брони", self))
         self.reservations_button.clicked.connect(self.open_reservations_screen)
         layout.addWidget(self.reservations_button)
 
-        self.home_button = QPushButton("На главную")
+        # Кнопка "На главную"
+        self.home_button = self.create_custom_widget(QPushButton("На главную", self))
         self.home_button.clicked.connect(self.go_to_home)
         layout.addWidget(self.home_button)
 
@@ -164,19 +167,19 @@ class RestaurantWindow(QWidget):
         screen = QWidget()
         layout = QVBoxLayout()
 
-        self.main_hall_button = QPushButton("Основной зал")
+        self.main_hall_button = self.create_custom_widget(QPushButton("Основной зал", self))
         self.main_hall_button.clicked.connect(lambda: self.open_table_editor("Основной зал"))
         layout.addWidget(self.main_hall_button)
 
-        self.veranda_button = QPushButton("Веранда")
+        self.veranda_button = self.create_custom_widget(QPushButton("Веранда", self))
         self.veranda_button.clicked.connect(lambda: self.open_table_editor("Веранда"))
         layout.addWidget(self.veranda_button)
 
-        self.second_hall_button = QPushButton("Второй зал")
+        self.second_hall_button = self.create_custom_widget(QPushButton("Второй зал", self))
         self.second_hall_button.clicked.connect(lambda: self.open_table_editor("Второй зал"))
         layout.addWidget(self.second_hall_button)
 
-        self.back_button = QPushButton("Назад")
+        self.back_button = self.create_custom_widget(QPushButton("Назад", self))
         self.back_button.clicked.connect(self.go_back_to_main)
         layout.addWidget(self.back_button)
 
@@ -188,19 +191,19 @@ class RestaurantWindow(QWidget):
         screen = QWidget()
         layout = QVBoxLayout()
 
-        self.add_table_button = QPushButton("Добавить столик")
+        self.add_table_button = self.create_custom_widget(QPushButton("Добавить столик", self))
         self.add_table_button.clicked.connect(self.add_table)
         layout.addWidget(self.add_table_button)
 
-        self.save_button = QPushButton("Сохранить")
+        self.save_button = self.create_custom_widget(QPushButton("Сохранить", self))
         self.save_button.clicked.connect(self.save_tables)
         layout.addWidget(self.save_button)
 
-        self.delete_table_button = QPushButton("Удалить столик")
+        self.delete_table_button = self.create_custom_widget(QPushButton("Удалить столик", self))
         self.delete_table_button.clicked.connect(self.delete_table)
         layout.addWidget(self.delete_table_button)
 
-        self.back_button = QPushButton("Назад")
+        self.back_button = self.create_custom_widget(QPushButton("Назад", self))
         self.back_button.clicked.connect(self.go_back_to_seating)
         layout.addWidget(self.back_button)
 
@@ -215,11 +218,11 @@ class RestaurantWindow(QWidget):
         self.reservations_list = QListWidget()
         layout.addWidget(self.reservations_list)
 
-        self.load_reservations_button = QPushButton("Загрузить брони")
+        self.load_reservations_button = self.create_custom_widget(QPushButton("Загрузить брони", self))
         self.load_reservations_button.clicked.connect(self.load_restaurant_reservations)
         layout.addWidget(self.load_reservations_button)
 
-        self.back_button = QPushButton("Назад")
+        self.back_button = self.create_custom_widget(QPushButton("Назад", self))
         self.back_button.clicked.connect(self.go_back_to_main)
         layout.addWidget(self.back_button)
 

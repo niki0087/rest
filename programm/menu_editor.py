@@ -27,6 +27,13 @@ class MenuEditorWindow(QWidget):
         layout = QVBoxLayout()
 
         self.menu_list = QListWidget()
+        self.menu_list.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         layout.addWidget(self.menu_list)
 
         self.name_label = QLabel("Название блюда:")
@@ -62,6 +69,13 @@ class MenuEditorWindow(QWidget):
         button_layout.addWidget(self.save_button)
 
         self.home_button = QPushButton("На главную")
+        self.home_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         self.home_button.clicked.connect(self.go_to_home)
         button_layout.addWidget(self.home_button)
 

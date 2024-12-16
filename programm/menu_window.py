@@ -36,10 +36,24 @@ class MenuWindow(QWidget):
         layout.addWidget(scroll_area)
 
         self.prev_button = QPushButton("Предыдущая страница")
+        self.prev_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         self.prev_button.clicked.connect(self.prev_page)
         layout.addWidget(self.prev_button)
 
         self.next_button = QPushButton("Следующая страница")
+        self.next_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         self.next_button.clicked.connect(self.next_page)
         layout.addWidget(self.next_button)
 

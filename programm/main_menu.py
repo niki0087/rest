@@ -129,6 +129,13 @@ class MainMenu(QWidget):
         main_layout.addWidget(self.stacked_widget)
 
         self.home_button = QPushButton("На главную")
+        self.home_button.setStyleSheet("""
+            background-color: #CCFFCC;
+            color: #000000;
+            border: 2px solid #000000;
+            border-radius: 10px;
+            padding: 10px;
+        """)
         self.home_button.clicked.connect(self.go_to_home)
         main_layout.addWidget(self.home_button)
 
