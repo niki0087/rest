@@ -18,7 +18,8 @@ class SeatingWindow(QWidget):
         self.selected_table_number = None  # Инициализация переменной для хранения номера столика
         self.table_buttons = {}  # Словарь для хранения кнопок столиков
         self.setWindowTitle(f"Свободные столики - {layout_name}")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
+        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину   
 
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#CCFFCC"))
@@ -117,8 +118,10 @@ class ReservationDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Бронирование столика")
-        self.setGeometry(200, 200, 400, 200)
-
+        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
+        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину
+        self.setMaximumHeight(600)
+        
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 

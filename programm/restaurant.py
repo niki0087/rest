@@ -17,7 +17,9 @@ class RestaurantWindow(QWidget):
         self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
         logger.debug("RestaurantWindow создан")
         self.setWindowTitle("Окно ресторана")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
+        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину        
+        
         self.user_email = user_email
 
         palette = self.palette()

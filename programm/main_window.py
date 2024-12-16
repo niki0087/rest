@@ -73,8 +73,10 @@ class MainMenu(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Основное меню")
-        self.setGeometry(100, 100, 800, 600)
-
+        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
+        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину
+        self.setMaximumHeight(600)
+        
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#001100"))
         self.setPalette(palette)

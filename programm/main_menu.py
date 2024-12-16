@@ -85,8 +85,10 @@ class MainMenu(QWidget):
         self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
         logger.debug(f"MainMenu создан, self.auth_window: {self.auth_window}")
         self.setWindowTitle("Основное меню")
-        self.setGeometry(100, 100, 800, 600)
-
+        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
+        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину
+        self.setMaximumHeight(600)
+        
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)

@@ -16,7 +16,10 @@ class MenuEditorWindow(QWidget):
         self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
         logger.debug("MenuEditorWindow создан")
         self.setWindowTitle("Редактор меню")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
+        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину
+        self.setMaximumHeight(600)
+        
         self.restaurant_email = restaurant_email
         self.menu = menu if menu else []
 

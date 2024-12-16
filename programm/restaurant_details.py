@@ -17,8 +17,10 @@ class RestaurantDetailsWindow(QWidget):
         super().__init__()
         self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
         self.setWindowTitle(f"Детали ресторана: {restaurant_info.get('name', 'Неизвестный ресторан')}")
-        self.setGeometry(100, 100, 800, 600)
-
+        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
+        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину
+        self.setMaximumHeight(600)
+        
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)
