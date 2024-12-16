@@ -9,7 +9,7 @@ from review_window import ReviewWindow  # Импорт нового класса
 import requests
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+# Настройка логгера
 logger = logging.getLogger(__name__)
 
 class RestaurantDetailsWindow(QWidget):
@@ -26,11 +26,67 @@ class RestaurantDetailsWindow(QWidget):
         self.layout = QVBoxLayout()  # Инициализация self.layout
         self.setLayout(self.layout)
 
+        # Сохраняем restaurant_info в атрибут класса
+        self.restaurant_info = restaurant_info
+
+        # Вывод всех данных, переданных в restaurant_info, в лог
+        logger.debug(f"Данные ресторана: {self.restaurant_info}")
+
+        # Убедитесь, что restaurant_info содержит ключ restaurant_id
+        if "restaurant_id" not in self.restaurant_info:
+            self.restaurant_info["restaurant_id"] = None  # Устанавливаем значение по умолчанию
+
+        # Загрузка основных данных о ресторане (если они не были загружены ранее)
+        if "opening_hours" not in self.restaurant_info or "phone_number" not in self.restaurant_info:
+            self.fetch_restaurant_data(self.restaurant_info.get("restaurant_id"))
+
         # Фотография ресторана
         self.photo_label = QLabel()
         self.photo_label.setAlignment(Qt.AlignCenter)
-        self.set_background_image(restaurant_info.get("restaurant_image", ""))
+        self.set_background_image(self.restaurant_info.get("restaurant_image", ""))
         self.layout.addWidget(self.photo_label)
+
+        # Информация о ресторане
+        self.info_layout = QVBoxLayout()
+        self.info_layout.setAlignment(Qt.AlignLeft)
+
+        # Название ресторана
+        self.name_label = QLabel(f"Название: {self.restaurant_info.get('name', 'Неизвестный ресторан')}")
+        self.name_label.setStyleSheet("color: #000000; font-size: 18px; font-weight: bold;")
+        self.info_layout.addWidget(self.name_label)
+
+        # Адрес ресторана
+        self.address_label = QLabel(f"Адрес: {self.restaurant_info.get('address', 'Не указан')}")
+        self.address_label.setStyleSheet("color: #000000; font-size: 16px;")
+        self.info_layout.addWidget(self.address_label)
+
+        # Город
+        self.city_label = QLabel(f"Город: {self.restaurant_info.get('city', 'Не указан')}")
+        self.city_label.setStyleSheet("color: #000000; font-size: 16px;")
+        self.info_layout.addWidget(self.city_label)
+
+        # Тип кухни
+        self.cuisine_label = QLabel(f"Тип кухни: {self.restaurant_info.get('cuisine_type', 'Не указан')}")
+        self.cuisine_label.setStyleSheet("color: #000000; font-size: 16px;")
+        self.info_layout.addWidget(self.cuisine_label)
+
+        # Рейтинг
+        self.rating_label = QLabel(f"Рейтинг: {self.restaurant_info.get('rating', 'Не указан')}")
+        self.rating_label.setStyleSheet("color: #000000; font-size: 16px;")
+        self.info_layout.addWidget(self.rating_label)
+
+        # Телефон
+        self.phone_label = QLabel(f"Телефон: {self.restaurant_info.get('phone_number', 'Не указан')}")
+        self.phone_label.setStyleSheet("color: #000000; font-size: 16px;")
+        self.info_layout.addWidget(self.phone_label)
+
+        # Часы работы
+        self.opening_hours_label = QLabel(f"Часы работы: {self.restaurant_info.get('opening_hours', 'Не указан')}")
+        self.opening_hours_label.setStyleSheet("color: #000000; font-size: 16px;")
+        self.info_layout.addWidget(self.opening_hours_label)
+
+        # Добавляем информацию о ресторане в основной макет
+        self.layout.addLayout(self.info_layout)
 
         # Описание ресторана
         self.description_label = QLabel("Описание:")
@@ -38,13 +94,13 @@ class RestaurantDetailsWindow(QWidget):
         self.layout.addWidget(self.description_label)
 
         self.description_text = QTextEdit()
-        self.description_text.setPlainText(restaurant_info.get("description", "Описание отсутствует"))
+        self.description_text.setPlainText(self.restaurant_info.get("description", "Описание отсутствует"))
         self.description_text.setReadOnly(True)
         self.description_text.setStyleSheet("background-color: #CCFFCC; color: #000000; border: 2px solid #000000; border-radius: 10px; padding: 10px;")
         self.layout.addWidget(self.description_text)
 
         # Средний чек
-        self.average_bill_label = QLabel(f"Средний чек: {restaurant_info.get('average_bill', 'Не указан')}")
+        self.average_bill_label = QLabel(f"Средний чек: {self.restaurant_info.get('average_bill', 'Не указан')}")
         self.average_bill_label.setStyleSheet("color: #000000; font-size: 16px; font-weight: bold;")
         self.layout.addWidget(self.average_bill_label)
 
@@ -87,16 +143,33 @@ class RestaurantDetailsWindow(QWidget):
 
         self.layout.addLayout(button_layout)
 
-        self.restaurant_info = restaurant_info
-        self.fetch_menu()
-
         # Добавляем QStackedWidget для отображения различных окон
         self.stacked_widget = stacked_widget
 
     def set_background_image(self, image_path):
+        """Устанавливает фоновое изображение для ресторана."""
         pixmap = QPixmap(image_path)
         if not pixmap.isNull():
             self.photo_label.setPixmap(pixmap.scaled(self.photo_label.width(), 300, Qt.KeepAspectRatio))
+
+    def fetch_restaurant_data(self, restaurant_id):
+        """Загружает основные данные о ресторане по его ID."""
+        if not restaurant_id:  # Проверяем, что restaurant_id не пустой
+            logger.error("ID ресторана отсутствует или пуст.")
+            return
+
+        url = f"http://localhost:8000/restaurant/{restaurant_id}/"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                restaurant_data = response.json()
+                # Обновляем restaurant_info
+                self.restaurant_info.update(restaurant_data)
+                logger.debug(f"Updated restaurant data: {self.restaurant_info}")
+            else:
+                logger.warning("Не удалось загрузить основные данные ресторана.")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Ошибка соединения: {e}")
 
     def fetch_menu(self):
         restaurant_id = self.restaurant_info.get("restaurant_id", "")

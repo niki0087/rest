@@ -324,9 +324,12 @@ async def create_or_update_restaurant(
         cursor.close()
         conn.close()
 
-@app.get("/restaurant/{email}/")
-async def get_restaurant(email: str):
-    """Маршрут для получения данных о ресторане."""
+@app.get("/restaurant/{restaurant_id}/")
+async def get_restaurant(restaurant_id: int):
+    """Маршрут для получения данных о ресторане по его ID."""
+    if not restaurant_id:  # Проверяем, что restaurant_id не пустой
+        raise HTTPException(status_code=400, detail="ID ресторана не указан.")
+
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -334,11 +337,14 @@ async def get_restaurant(email: str):
         cursor.execute("""
             SELECT RESTAURANT_ID, NAME, ADDRESS, CITY, CUISINE_TYPE, PHONE_NUMBER, EMAIL, RATING, DESCRIPTION, RESTAURANT_IMAGE, OPENING_HOURS, AVERAGE_BILL
             FROM restaurants
-            WHERE email = ?
-        """, (email,))
+            WHERE RESTAURANT_ID = ?
+        """, (restaurant_id,))
         result = cursor.fetchone()
         if not result:
             raise HTTPException(status_code=404, detail="Данные о ресторане не найдены")
+
+        # Логируем данные из таблицы restaurants
+        logger.debug(f"Fetched restaurant data: {result}")
 
         return {
             "restaurant_id": result[0],
@@ -362,7 +368,7 @@ async def get_restaurant(email: str):
     finally:
         cursor.close()
         conn.close()
-
+                        
 @app.get("/filter-restaurants/")
 async def filter_restaurants(
     rating: Optional[float] = Query(None, description="Рейтинг ресторана"),
