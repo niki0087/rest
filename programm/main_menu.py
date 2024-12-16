@@ -145,9 +145,24 @@ class MainMenu(QWidget):
         self.create_reservations_menu()
         self.create_restaurant_layout()
 
-        self.filter_restaurants()
+        # Загружаем все рестораны при инициализации
+        self.load_all_restaurants()
+
         self.is_filter_menu_open = False  # Флаг для отслеживания состояния меню фильтров
         self.is_reservations_menu_open = False  # Флаг для отслеживания состояния меню бронирований
+
+    def load_all_restaurants(self):
+        """Загружает все рестораны без фильтрации."""
+        url = "http://localhost:8000/filter-restaurants/"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                restaurants = response.json()
+                self.display_restaurants(restaurants)
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось получить данные о ресторанах.")
+        except requests.exceptions.RequestException as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
     def create_filter_menu(self):
         self.filter_menu = QWidget(self)
@@ -263,6 +278,7 @@ class MainMenu(QWidget):
         self.stacked_widget.addWidget(self.restaurant_widget)
 
     def toggle_filter_menu(self):
+        logger.debug("Вызван метод toggle_filter_menu")
         if self.is_filter_menu_open:
             self.filter_animation.setStartValue(self.filter_menu.geometry())
             self.filter_animation.setEndValue(QRect(
