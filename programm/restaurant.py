@@ -43,6 +43,10 @@ class RestaurantWindow(QWidget):
         self.table_editor_screen = self.create_table_editor_screen()
         self.stacked_widget.addWidget(self.table_editor_screen)
 
+        # Добавляем экран броней
+        self.reservations_screen = self.create_reservations_screen()
+        self.stacked_widget.addWidget(self.reservations_screen)
+
         self.setLayout(self.layout)
 
         self.load_restaurant()
@@ -111,6 +115,10 @@ class RestaurantWindow(QWidget):
 
         self.seating_button = self.create_custom_widget(QPushButton("Редактировать посадку", self))
         self.seating_button.clicked.connect(self.open_seating_editor)
+
+        self.reservations_button = QPushButton("Посмотреть брони")
+        self.reservations_button.clicked.connect(self.open_reservations_screen)
+        layout.addWidget(self.reservations_button)
 
         self.home_button = QPushButton("На главную")
         self.home_button.clicked.connect(self.go_to_home)
@@ -199,6 +207,25 @@ class RestaurantWindow(QWidget):
         screen.setLayout(layout)
         return screen
 
+    def create_reservations_screen(self):
+        """Создает экран для отображения всех броней ресторана."""
+        screen = QWidget()
+        layout = QVBoxLayout()
+
+        self.reservations_list = QListWidget()
+        layout.addWidget(self.reservations_list)
+
+        self.load_reservations_button = QPushButton("Загрузить брони")
+        self.load_reservations_button.clicked.connect(self.load_restaurant_reservations)
+        layout.addWidget(self.load_reservations_button)
+
+        self.back_button = QPushButton("Назад")
+        self.back_button.clicked.connect(self.go_back_to_main)
+        layout.addWidget(self.back_button)
+
+        screen.setLayout(layout)
+        return screen
+
     def select_photo(self):
         """Открывает диалоговое окно для выбора файла изображения."""
         file_name, _ = QFileDialog.getOpenFileName(self, "Выбрать фото", "", "Images (*.png *.xpm *.jpg)")
@@ -206,7 +233,7 @@ class RestaurantWindow(QWidget):
             self.photo_input.setText(file_name)
 
     def load_restaurant(self):
-        url = f"http://localhost:8000/restaurant/{self.user_email}/"
+        url = f"http://localhost:8000/restaurant/email/{self.user_email}/"
         try:
             response = requests.get(url)
             if response.status_code == 200:
@@ -285,6 +312,10 @@ class RestaurantWindow(QWidget):
         self.current_layout = layout_name
         self.stacked_widget.setCurrentWidget(self.table_editor_screen)
 
+    def open_reservations_screen(self):
+        """Переключает на экран броней."""
+        self.stacked_widget.setCurrentWidget(self.reservations_screen)
+
     def add_table(self):
         table_number, ok = QInputDialog.getInt(self, "Добавить столик", "Номер столика:")
         if ok:
@@ -349,7 +380,7 @@ class RestaurantWindow(QWidget):
             self.auth_window.show()
 
     def get_restaurant_id(self):
-        url = f"http://localhost:8000/restaurant/{self.user_email}/"
+        url = f"http://localhost:8000/restaurant/email/{self.user_email}/"
         try:
             response = requests.get(url)
             if response.status_code == 200:
@@ -373,3 +404,28 @@ class RestaurantWindow(QWidget):
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
         return []
+
+    def load_restaurant_reservations(self):
+        """Загружает все брони для текущего ресторана."""
+        restaurant_id = self.get_restaurant_id()  # Получаем restaurant_id по email
+        if not restaurant_id:
+            QMessageBox.warning(self, "Ошибка", "Не удалось получить идентификатор ресторана.")
+            return
+
+        url = f"http://localhost:8000/restaurant/{restaurant_id}/reservations/"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                reservations = response.json()
+                self.display_reservations(reservations)
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить брони.")
+        except requests.exceptions.RequestException as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+
+    def display_reservations(self, reservations):
+        """Отображает список броней в интерфейсе."""
+        self.reservations_list.clear()
+        for reservation in reservations:
+            item = QListWidgetItem(f"Столик {reservation['table_number']} на {reservation['reservation_time']}")
+            self.reservations_list.addItem(item)

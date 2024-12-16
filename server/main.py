@@ -950,6 +950,82 @@ async def delete_review(review_id: int, user_email: str):
         cursor.close()
         conn.close()
 
+@app.get("/restaurant/email/{email}/")
+async def get_restaurant_by_email(email: str):
+    """Маршрут для получения данных о ресторане по email пользователя."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверяем, существует ли ресторан для данного email
+        cursor.execute("""
+            SELECT RESTAURANT_ID, NAME, ADDRESS, CITY, CUISINE_TYPE, PHONE_NUMBER, EMAIL, RATING, DESCRIPTION, RESTAURANT_IMAGE, OPENING_HOURS, AVERAGE_BILL
+            FROM restaurants
+            WHERE EMAIL = ?
+        """, (email,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+        # Возвращаем данные о ресторане
+        return {
+            "restaurant_id": result[0],
+            "name": result[1],
+            "address": result[2],
+            "city": result[3],
+            "cuisine_type": result[4],
+            "phone_number": result[5],
+            "email": result[6],
+            "rating": result[7],
+            "description": result[8],
+            "restaurant_image": result[9],
+            "opening_hours": result[10],
+            "average_bill": result[11]
+        }
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении данных о ресторане: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении данных о ресторане")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/restaurant/{restaurant_id}/reservations/")
+async def get_restaurant_reservations(restaurant_id: int):
+    """Маршрут для получения всех броней для указанного ресторана."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Получаем все брони для указанного ресторана
+        cursor.execute("""
+            SELECT SEATING_CHART_ID, TABLE_NUMBER, RESERVATION_TIME, USER_ID
+            FROM SEATING_CHARTS
+            WHERE RESTAURANT_ID = ?
+        """, (restaurant_id,))
+        reservations = cursor.fetchall()
+
+        # Преобразуем данные в формат JSON, исключая брони с reservation_time = None
+        reservation_list = [
+            {
+                "seating_chart_id": res[0],
+                "table_number": res[1],
+                "reservation_time": res[2].isoformat() if res[2] else None,  # Проверка на None
+                "user_id": res[3]
+            }
+            for res in reservations
+            if res[2] is not None  # Исключаем брони с reservation_time = None
+        ]
+
+        return reservation_list
+
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении бронирований: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении бронирований")
+
+    finally:
+        cursor.close()
+        conn.close()
+                
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
