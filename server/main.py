@@ -828,15 +828,70 @@ async def get_reviews(restaurant_id: int):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            SELECT RATING, COMMENT, CREATED_AT
+            SELECT REVIEW_ID, RATING, COMMENT, CREATED_AT
             FROM REVIEWS
             WHERE RESTAURANT_ID = ?
         """, (restaurant_id,))
         reviews = cursor.fetchall()
-        return [{"rating": review[0], "comment": review[1], "created_at": review[2].isoformat()} for review in reviews]
+        return [
+            {
+                "review_id": review[0],  # Добавляем review_id
+                "rating": review[1],
+                "comment": review[2],
+                "created_at": review[3].isoformat()
+            }
+            for review in reviews
+        ]
     except firebirdsql.Error as e:
         logger.error(f"Ошибка при получении отзывов: {e}")
         raise HTTPException(status_code=500, detail="Ошибка при получении отзывов")
+    finally:
+        cursor.close()
+        conn.close()
+        
+@app.delete("/reviews/{review_id}/")
+async def delete_review(review_id: int, user_email: str):
+    """Маршрут для удаления отзыва пользователем."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Получение ID пользователя
+        cursor.execute("SELECT USER_ID FROM users WHERE email = ?", (user_email,))
+        user_id = cursor.fetchone()
+        if not user_id:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user_id = user_id[0]
+
+        # Проверка, что отзыв принадлежит пользователю
+        cursor.execute("""
+            SELECT USER_ID FROM REVIEWS WHERE REVIEW_ID = ?
+        """, (review_id,))
+        review_user_id = cursor.fetchone()
+        if not review_user_id:
+            raise HTTPException(status_code=404, detail="Отзыв не найден")
+
+        review_user_id = review_user_id[0]
+
+        if review_user_id != user_id:
+            raise HTTPException(status_code=403, detail="Вы не можете удалить этот отзыв")
+
+        # Удаление отзыва
+        cursor.execute("""
+            DELETE FROM REVIEWS WHERE REVIEW_ID = ?
+        """, (review_id,))
+        conn.commit()
+
+        return {"message": "Отзыв успешно удален"}
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except firebirdsql.Error as fb_error:
+        logger.error(f"Ошибка Firebird при удалении отзыва: {fb_error}")
+        raise HTTPException(status_code=500, detail="Ошибка базы данных при удалении отзыва")
+    except Exception as e:
+        logger.error(f"Неизвестная ошибка при удалении отзыва: {e}")
+        raise HTTPException(status_code=500, detail="Произошла ошибка при удалении отзыва. Пожалуйста, попробуйте позже.")
     finally:
         cursor.close()
         conn.close()

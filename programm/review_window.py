@@ -48,6 +48,7 @@ class ReviewWindow(QWidget):
         self.reviews_label = QLabel("Отзывы:")
         self.reviews_label.setStyleSheet("color: #000000;")
         self.reviews_list = QListWidget()
+        self.reviews_list.itemClicked.connect(self.show_delete_button)  # Подключаем обработчик клика
         layout.addWidget(self.reviews_label)
         layout.addWidget(self.reviews_list)
 
@@ -102,7 +103,30 @@ class ReviewWindow(QWidget):
         self.reviews_list.clear()
         for review in reviews:
             item = QListWidgetItem(f"Рейтинг: {review['rating']} | {review['comment']} | {review['created_at']}")
+            item.setData(Qt.UserRole, review['review_id'])  # Сохраняем review_id в данных элемента
             self.reviews_list.addItem(item)
+
+    def show_delete_button(self, item):
+        """Показывает кнопку удаления для выбранного отзыва."""
+        self.delete_button = QPushButton("Удалить отзыв")
+        self.delete_button.clicked.connect(lambda: self.delete_review(item))
+        self.layout().addWidget(self.delete_button)
+
+    def delete_review(self, item):
+        """Удаляет выбранный отзыв."""
+        review_id = item.data(Qt.UserRole)  # Получаем review_id из данных элемента
+        user_email = self.auth_window.login_email_input.text()
+
+        url = f"http://localhost:8000/reviews/{review_id}/"
+        try:
+            response = requests.delete(url, params={"user_email": user_email})
+            if response.status_code == 200:
+                QMessageBox.information(self, "Успех", "Отзыв успешно удален.")
+                self.load_reviews()  # Обновляем список отзывов
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось удалить отзыв.")
+        except requests.exceptions.RequestException as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
     def go_to_home(self):
         if self.auth_window:
