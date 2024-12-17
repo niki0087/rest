@@ -188,6 +188,7 @@ class RestaurantDetailsWindow(QWidget):
                 self.restaurant_info["menu"] = []
 
     def open_menu(self):
+        self.fetch_menu()
         menu = self.restaurant_info.get("menu", [])
         logger.debug(f"Opening menu with data: {menu}")
         if not menu:

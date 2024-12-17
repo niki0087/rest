@@ -23,8 +23,16 @@ class MenuWindow(QWidget):
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("""
+            border: 2px solid #000000;
+            background-color: white;
+        """)
 
         content_widget = QWidget()
+        content_widget.setStyleSheet("""
+            background-color: white;
+            border: none;  /* Убираем внутренние рамки */
+        """)
         content_layout = QVBoxLayout()
         content_widget.setLayout(content_layout)
 
@@ -66,6 +74,10 @@ class MenuWindow(QWidget):
     def create_pages(self, menu, layout):
         page_layout = QVBoxLayout()
         page_frame = QFrame()
+        page_frame.setStyleSheet("""
+            background-color: white;
+            border: none;  /* Убираем внутренние рамки */
+        """)
         page_frame.setLayout(page_layout)
         self.pages.append(page_frame)
 
@@ -116,6 +128,7 @@ class MenuWindow(QWidget):
         layout.addWidget(price_label)
 
         widget = QWidget()
+        widget.setStyleSheet("background-color: white;")
         widget.setLayout(layout)
         return widget
 
