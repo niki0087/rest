@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPalette, QColor, QFont
 import requests
 import logging
-from menu_editor import MenuEditorWindow  # Импорт нового класса
+from menu_editor import MenuEditorScreen  # Импорт нового класса
 from auth import AuthWindow  # Импорт класса AuthWindow
 
 # Настройка логгера
@@ -48,6 +48,10 @@ class RestaurantWindow(QWidget):
         # Добавляем экран броней
         self.reservations_screen = self.create_reservations_screen()
         self.stacked_widget.addWidget(self.reservations_screen)
+
+        # Добавляем экран редактора меню
+        self.menu_editor_screen = MenuEditorScreen(self.user_email, parent=self)
+        self.stacked_widget.addWidget(self.menu_editor_screen)
 
         self.setLayout(self.layout)
 
@@ -304,9 +308,10 @@ class RestaurantWindow(QWidget):
         # Загрузка меню ресторана
         menu = self.load_menu(restaurant_id)
 
-        # Открытие окна редактора меню
-        self.menu_editor_window = MenuEditorWindow(self.user_email, menu, self.auth_window)
-        self.menu_editor_window.show()
+        # Переключение на экран редактора меню
+        self.menu_editor_screen.menu = menu
+        self.menu_editor_screen.display_menu()
+        self.stacked_widget.setCurrentWidget(self.menu_editor_screen)
 
     def open_seating_editor(self):
         """Переключает на экран редактирования посадки."""

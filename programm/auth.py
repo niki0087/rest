@@ -164,6 +164,8 @@ class AuthWindow(QWidget):
             if response.status_code == 200:
                 role = response.json().get("role", "user")
                 QMessageBox.information(self, "Успех", f"Вы вошли как {role}!")
+
+                # Проверяем роль пользователя
                 if role == "admin":
                     from admin import AdminWindow  # Ленивый импорт
                     self.admin_window = AdminWindow(self)
@@ -174,11 +176,20 @@ class AuthWindow(QWidget):
                     self.restaurant_window = RestaurantWindow(email, self)
                     self.restaurant_window.show()  # Показываем новое окно
                     self.hide()  # Скрываем окно аутентификации
+                elif role == "user":
+                    # Проверяем, есть ли у пользователя ресторан
+                    restaurant_url = f"http://localhost:8000/restaurant/email/{email}/"
+                    restaurant_response = requests.get(restaurant_url)
+                    if restaurant_response.status_code == 200:
+                        # Если ресторан существует, но роль не изменена, выводим сообщение об ошибке
+                        QMessageBox.warning(self, "Ошибка", "Отсутствуют права доступа, обратитесь к администратору.")
+                    else:
+                        from main_menu import MainMenu  # Ленивый импорт
+                        self.main_menu = MainMenu(self)
+                        self.main_menu.show()  # Показываем новое окно
+                        self.hide()  # Скрываем окно аутентификации
                 else:
-                    from main_menu import MainMenu  # Ленивый импорт
-                    self.main_menu = MainMenu(self)
-                    self.main_menu.show()  # Показываем новое окно
-                    self.hide()  # Скрываем окно аутентификации
+                    QMessageBox.warning(self, "Ошибка", "Неизвестная роль пользователя.")
             else:
                 QMessageBox.warning(self, "Ошибка", response.text)
         except requests.exceptions.RequestException as e:

@@ -10,18 +10,12 @@ import logging
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
-class MenuEditorWindow(QWidget):
-    def __init__(self, restaurant_email, menu=None, auth_window=None):
-        super().__init__()
-        self.auth_window = auth_window  # Сохраняем ссылку на окно аутентификации
-        logger.debug("MenuEditorWindow создан")
-        self.setWindowTitle("Редактор меню")
-        self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
-        self.setMaximumWidth(500)  # Ограничиваем максимальную ширину
-        self.setMaximumHeight(600)
-        
+class MenuEditorScreen(QWidget):
+    def __init__(self, restaurant_email, menu=None, parent=None):
+        super().__init__(parent)
         self.restaurant_email = restaurant_email
         self.menu = menu if menu else []
+        self.parent_window = parent  # Сохраняем ссылку на родительское окно
 
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#CCFFCC"))
@@ -71,16 +65,16 @@ class MenuEditorWindow(QWidget):
         self.save_button.clicked.connect(self.save_menu)
         button_layout.addWidget(self.save_button)
 
-        self.home_button = QPushButton("На главную")
-        self.home_button.setStyleSheet("""
+        self.back_button = QPushButton("Назад")
+        self.back_button.setStyleSheet("""
             background-color: #CCFFCC;
             color: #000000;
             border: 2px solid #000000;
             border-radius: 10px;
             padding: 10px;
         """)
-        self.home_button.clicked.connect(self.go_to_home)
-        button_layout.addWidget(self.home_button)
+        self.back_button.clicked.connect(self.go_back)
+        button_layout.addWidget(self.back_button)
 
         layout.addWidget(self.name_label)
         layout.addWidget(self.name_input)
@@ -193,11 +187,6 @@ class MenuEditorWindow(QWidget):
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
-    def go_to_home(self):
-        if self.auth_window:
-            logger.debug("self.auth_window существует и будет показан")
-            self.auth_window.show()
-            self.hide()
-        else:
-            logger.error("self.auth_window не существует")
-            QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")
+    def go_back(self):
+        # Используем ссылку на родительское окно для вызова метода go_back_to_main
+        self.parent_window.go_back_to_main()
