@@ -10,14 +10,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SeatingWindow(QWidget):
-    def __init__(self, restaurant_id, layout_name, auth_window):
+    def __init__(self, restaurant_id, auth_window):
         super().__init__()
         self.restaurant_id = restaurant_id
-        self.layout_name = layout_name
         self.auth_window = auth_window
         self.selected_table_number = None  # Инициализация переменной для хранения номера столика
         self.table_buttons = {}  # Словарь для хранения кнопок столиков
-        self.setWindowTitle(f"Свободные столики - {layout_name}")
+        self.setWindowTitle(f"Свободные столики")
         self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
         self.setMaximumWidth(500)  # Ограничиваем максимальную ширину   
 
@@ -30,9 +29,13 @@ class SeatingWindow(QWidget):
 
         self.load_seating()
 
-    def load_seating(self):
+    def load_seating(self, layout_name=None):
         """Загрузка информации о столиках из базы данных."""
-        url = f"http://localhost:8000/seating/{self.restaurant_id}/{self.layout_name}/"
+        if layout_name:
+            url = f"http://localhost:8000/seating/{self.restaurant_id}/{layout_name}/"
+        else:
+            url = f"http://localhost:8000/seating/{self.restaurant_id}/"
+
         try:
             response = requests.get(url)
             if response.status_code == 200:
@@ -42,7 +45,7 @@ class SeatingWindow(QWidget):
                 QMessageBox.warning(self, "Ошибка", "Не удалось загрузить данные о столиках.")
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
-
+            
     def display_seating(self, seating_data):
         """Отображение столиков на экране."""
         # Очищаем текущий макет
@@ -57,11 +60,12 @@ class SeatingWindow(QWidget):
         for table in seating_data:
             table_number = table['table_number']
             capacity = table['capacity']
+            layout = table['layout']  # Добавляем расположение столика
 
             # Проверяем, существует ли уже кнопка для этого столика
             if table_number not in self.table_buttons:
                 # Создаем новую кнопку для столика
-                table_button = QPushButton(f"Столик {table_number} ({capacity} мест)")
+                table_button = QPushButton(f"Столик {table_number} ({capacity} мест) - {layout}")
                 table_button.setStyleSheet("background-color: green;")  # Все столики свободны
                 table_button.clicked.connect(lambda _, t=table: self.reserve_table(t))
                 self.table_buttons[table_number] = table_button
@@ -69,13 +73,8 @@ class SeatingWindow(QWidget):
             else:
                 # Обновляем текст и состояние существующей кнопки
                 table_button = self.table_buttons[table_number]
-                table_button.setText(f"Столик {table_number} ({capacity} мест)")
+                table_button.setText(f"Столик {table_number} ({capacity} мест) - {layout}")
                 table_button.setStyleSheet("background-color: green;")  # Все столики свободны
-
-        # Добавляем кнопку "Назад"
-        back_button = QPushButton("Назад")
-        back_button.clicked.connect(self.close)
-        self.layout.addWidget(back_button)
 
     def reserve_table(self, table):
         """Обработка бронирования столика."""

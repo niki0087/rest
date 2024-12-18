@@ -55,9 +55,9 @@ class ReviewWindow(QWidget):
         layout.addWidget(self.reviews_list)
 
         # Кнопка "На главную"
-        self.home_button = QPushButton("На главную")
-        self.home_button.clicked.connect(self.go_to_home)
-        layout.addWidget(self.home_button)
+        # self.home_button = QPushButton("На главнуюю")
+        # self.home_button.clicked.connect(self.go_to_home)
+        # layout.addWidget(self.home_button)
 
         self.setLayout(layout)
 
@@ -130,10 +130,10 @@ class ReviewWindow(QWidget):
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
-    def go_to_home(self):
-        if self.auth_window:
-            self.auth_window.show()
-            self.hide()
-        else:
-            logger.error("self.auth_window не существует")
-            QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")
+    # def go_to_home(self):
+    #     if self.auth_window:
+    #         self.auth_window.show()
+    #         self.hide()
+    #     else:
+    #         logger.error("self.auth_window не существует")
+    #         QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")

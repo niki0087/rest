@@ -200,7 +200,7 @@ class RestaurantDetailsWindow(QWidget):
 
     def open_tables(self):
         """Открывает окно со свободными столиками."""
-        self.seating_window = SeatingWindow(self.restaurant_info.get("restaurant_id"), "Основной зал", self.auth_window)
+        self.seating_window = SeatingWindow(self.restaurant_info.get("restaurant_id"), self.auth_window)
         self.stacked_widget.addWidget(self.seating_window)
         self.stacked_widget.setCurrentWidget(self.seating_window)
 

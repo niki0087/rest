@@ -658,6 +658,39 @@ async def get_seating(restaurant_id: int, layout_name: str):
         cursor.close()
         conn.close()
 
+@app.get("/seating/{restaurant_id}/")
+async def get_all_seating(restaurant_id: int):
+    """Маршрут для получения всех столиков ресторана (без указания layout_name)."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Запрос к базе данных для получения данных о столиках
+        cursor.execute("""
+            SELECT SEATING_CHART_ID, TABLE_NUMBER, CAPACITY, LAYOUT
+            FROM SEATING_CHARTS
+            WHERE RESTAURANT_ID = ?
+        """, (restaurant_id,))
+        seating_data = cursor.fetchall()
+
+        # Преобразуем данные в формат JSON
+        seating_list = [
+            {
+                "seating_chart_id": row[0],
+                "table_number": row[1],
+                "capacity": row[2],
+                "layout": row[3]
+            }
+            for row in seating_data
+        ]
+
+        return seating_list
+    except firebirdsql.Error as e:
+        logger.error(f"Ошибка при получении данных о столиках: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении данных о столиках")
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.post("/seating/{restaurant_id}/reserve/")
 async def reserve_table(restaurant_id: int, request: ReservationRequest):
     """Маршрут для бронирования столика."""
