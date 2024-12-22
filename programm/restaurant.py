@@ -257,7 +257,9 @@ class RestaurantWindow(QWidget):
                 self.phone_number_input.setText(restaurant.get("phone_number", ""))
                 self.opening_hours_input.setText(restaurant.get("opening_hours", ""))
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить данные ресторана.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось загрузить данные ресторана.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -294,7 +296,9 @@ class RestaurantWindow(QWidget):
             if response.status_code == 200:
                 QMessageBox.information(self, "Успех", "Данные ресторана успешно сохранены.")
             else:
-                QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить данные ресторана: {response.text}")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось сохранить данные ресторана.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
                                     
@@ -345,7 +349,9 @@ class RestaurantWindow(QWidget):
             if response.status_code == 200:
                 QMessageBox.information(self, "Успех", "Столик успешно добавлен.")
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось добавить столик.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось добавить столик.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -358,7 +364,9 @@ class RestaurantWindow(QWidget):
                 if response.status_code == 200:
                     QMessageBox.information(self, "Успех", "Столик успешно удален.")
                 else:
-                    QMessageBox.warning(self, "Ошибка", "Не удалось удалить столик.")
+                    response_data = response.json()
+                    error_message = response_data.get("detail", "Не удалось удалить столик.")
+                    QMessageBox.warning(self, "Ошибка", error_message)
             except requests.exceptions.RequestException as e:
                 QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -397,7 +405,9 @@ class RestaurantWindow(QWidget):
                 restaurant = response.json()
                 return restaurant.get("restaurant_id")
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить данные ресторана.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось загрузить данные ресторана.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
         return None
@@ -410,7 +420,9 @@ class RestaurantWindow(QWidget):
                 menu = response.json()
                 return menu
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить меню ресторана.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось загрузить меню ресторана.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
         return []
@@ -429,7 +441,9 @@ class RestaurantWindow(QWidget):
                 reservations = response.json()
                 self.display_reservations(reservations)
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить брони.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось загрузить брони.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 

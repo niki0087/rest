@@ -16,7 +16,6 @@ class AuthWindow(QWidget):
         self.setGeometry(100, 100, 500, 600)  # Устанавливаем начальные размеры
         self.setMaximumWidth(500)  # Ограничиваем максимальную ширину
         self.setMaximumHeight(600)
-        self.setMaximumHeight(600)
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#CCFFCC"))
         self.setPalette(palette)
@@ -144,7 +143,9 @@ class AuthWindow(QWidget):
                 QMessageBox.information(self, "Успех", "Регистрация прошла успешно. Пожалуйста, войдите.")
                 self.show_login_form()
             else:
-                QMessageBox.warning(self, "Ошибка", response.text)
+                response_data = response.json()
+                error_message = response_data.get("detail", "Неизвестная ошибка")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -191,6 +192,8 @@ class AuthWindow(QWidget):
                 else:
                     QMessageBox.warning(self, "Ошибка", "Неизвестная роль пользователя.")
             else:
-                QMessageBox.warning(self, "Ошибка", response.text)
+                response_data = response.json()
+                error_message = response_data.get("detail", "Неизвестная ошибка")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")

@@ -54,11 +54,6 @@ class ReviewWindow(QWidget):
         layout.addWidget(self.reviews_label)
         layout.addWidget(self.reviews_list)
 
-        # Кнопка "На главную"
-        # self.home_button = QPushButton("На главнуюю")
-        # self.home_button.clicked.connect(self.go_to_home)
-        # layout.addWidget(self.home_button)
-
         self.setLayout(layout)
 
         self.load_reviews()
@@ -85,7 +80,9 @@ class ReviewWindow(QWidget):
                 QMessageBox.information(self, "Успех", "Отзыв успешно добавлен.")
                 self.load_reviews()
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось добавить отзыв.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось добавить отзыв.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -97,7 +94,9 @@ class ReviewWindow(QWidget):
                 reviews = response.json()
                 self.display_reviews(reviews)
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить отзывы.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось загрузить отзывы.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -126,14 +125,8 @@ class ReviewWindow(QWidget):
                 QMessageBox.information(self, "Успех", "Отзыв успешно удален.")
                 self.load_reviews()  # Обновляем список отзывов
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось удалить отзыв.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось удалить отзыв.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
-
-    # def go_to_home(self):
-    #     if self.auth_window:
-    #         self.auth_window.show()
-    #         self.hide()
-    #     else:
-    #         logger.error("self.auth_window не существует")
-    #         QMessageBox.warning(self, "Ошибка", "Окно аутентификации не найдено.")

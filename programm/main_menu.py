@@ -162,7 +162,9 @@ class MainMenu(QWidget):
                 restaurants = response.json()
                 self.display_restaurants(restaurants)
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось получить данные о ресторанах.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось получить данные о ресторанах.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -379,7 +381,9 @@ class MainMenu(QWidget):
                 self.is_filter_menu_open = False
                 self.toggle_filter_menu()
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось получить данные о ресторанах.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось получить данные о ресторанах.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -427,7 +431,9 @@ class MainMenu(QWidget):
                 logger.debug(f"Received reservations: {reservations}")  # Отладочный вывод
                 self.display_reservations(reservations)
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить бронирования.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось загрузить бронирования.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -462,7 +468,9 @@ class MainMenu(QWidget):
                     QMessageBox.information(self, "Успех", "Бронь успешно удалена.")
                     self.load_reservations()  # Обновляем список бронирований
                 else:
-                    QMessageBox.warning(self, "Ошибка", "Не удалось удалить бронь.")
+                    response_data = response.json()
+                    error_message = response_data.get("detail", "Не удалось удалить бронь.")
+                    QMessageBox.warning(self, "Ошибка", error_message)
             except requests.exceptions.RequestException as e:
                 QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
         else:

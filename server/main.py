@@ -143,7 +143,7 @@ async def register(user: User):
     finally:
         cursor.close()
         conn.close()
-
+        
 @app.post("/login/")
 async def login(login: LoginRequest):
     """Маршрут для входа пользователя."""
@@ -265,7 +265,7 @@ async def delete_user(email: str, admin_email: str):
     finally:
         cursor.close()
         conn.close()
-
+                
 # Маршруты для работы с ресторанами
 @app.post("/restaurant/{email}/")
 async def create_or_update_restaurant(

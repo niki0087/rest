@@ -84,7 +84,9 @@ class AdminWindow(QWidget):
                     if user["role"] != "admin":
                         self.user_list.addItem(f"{user['name']} ({user['email']}) - {user['role']}")
             else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить список пользователей.")
+                response_data = response.json()
+                error_message = response_data.get("detail", "Не удалось загрузить список пользователей.")
+                QMessageBox.warning(self, "Ошибка", error_message)
         except requests.exceptions.RequestException as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
 
@@ -102,7 +104,9 @@ class AdminWindow(QWidget):
                     QMessageBox.information(self, "Успех", "Пользователь успешно удален.")
                     self.user_list.takeItem(self.user_list.currentRow())
                 else:
-                    QMessageBox.warning(self, "Ошибка", "Не удалось удалить пользователя.")
+                    response_data = response.json()
+                    error_message = response_data.get("detail", "Не удалось удалить пользователя.")
+                    QMessageBox.warning(self, "Ошибка", error_message)
             except requests.exceptions.RequestException as e:
                 QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
         else:
@@ -124,7 +128,9 @@ class AdminWindow(QWidget):
                         QMessageBox.information(self, "Успех", "Роль пользователя изменена.")
                         self.load_users()
                     else:
-                        QMessageBox.warning(self, "Ошибка", "Не удалось изменить роль пользователя.")
+                        response_data = response.json()
+                        error_message = response_data.get("detail", "Не удалось изменить роль пользователя.")
+                        QMessageBox.warning(self, "Ошибка", error_message)
                 except requests.exceptions.RequestException as e:
                     QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
         else:
