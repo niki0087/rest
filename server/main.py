@@ -112,7 +112,7 @@ def is_valid_iso_format(time_str: str) -> bool:
         return False
 
 # Маршруты для работы с пользователями
-@app.post("/register/")
+@app.post("/register/", status_code=201)
 async def register(user: User):
     """Маршрут для регистрации пользователя."""
     conn = get_db_connection()
@@ -143,7 +143,7 @@ async def register(user: User):
     finally:
         cursor.close()
         conn.close()
-        
+                
 @app.post("/login/")
 async def login(login: LoginRequest):
     """Маршрут для входа пользователя."""

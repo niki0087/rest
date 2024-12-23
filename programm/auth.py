@@ -7,6 +7,7 @@ import logging
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class AuthWindow(QWidget):
     def __init__(self):
@@ -139,6 +140,9 @@ class AuthWindow(QWidget):
 
         try:
             response = requests.post(url, json=data)
+            logger.debug(f"Response status code: {response.status_code}")
+            logger.debug(f"Response content: {response.content}")
+
             if response.status_code == 201:
                 QMessageBox.information(self, "Успех", "Регистрация прошла успешно. Пожалуйста, войдите.")
                 self.show_login_form()
