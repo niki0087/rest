@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QListWidget, QListWidgetItem, QInputDialog, QStackedWidget
 )
 from PyQt5.QtGui import QPalette, QColor, QFont
+from PyQt5.QtCore import Qt
 import requests
 import logging
 from menu_editor import MenuEditorScreen  # Импорт нового класса
@@ -222,11 +223,18 @@ class RestaurantWindow(QWidget):
         layout = QVBoxLayout()
 
         self.reservations_list = QListWidget()
+        self.reservations_list.itemClicked.connect(self.enable_delete_button)  # Подключаем обработчик выбора брони
         layout.addWidget(self.reservations_list)
 
         self.load_reservations_button = self.create_custom_widget(QPushButton("Загрузить брони", self))
         self.load_reservations_button.clicked.connect(self.load_restaurant_reservations)
         layout.addWidget(self.load_reservations_button)
+
+        # Кнопка "Удалить бронь"
+        self.delete_reservation_button = self.create_custom_widget(QPushButton("Удалить бронь", self))
+        self.delete_reservation_button.setEnabled(False)  # Кнопка изначально отключена
+        self.delete_reservation_button.clicked.connect(self.delete_selected_reservation)
+        layout.addWidget(self.delete_reservation_button)
 
         self.back_button = self.create_custom_widget(QPushButton("Назад", self))
         self.back_button.clicked.connect(self.go_back_to_main)
@@ -452,4 +460,35 @@ class RestaurantWindow(QWidget):
         self.reservations_list.clear()
         for reservation in reservations:
             item = QListWidgetItem(f"Столик {reservation['table_number']} на {reservation['reservation_time']}")
+            item.setData(Qt.UserRole, reservation['seating_chart_id'])  # Сохраняем seating_chart_id в данных элемента
             self.reservations_list.addItem(item)
+
+    def enable_delete_button(self, item):
+        """Активирует кнопку 'Удалить бронь' после выбора брони."""
+        self.delete_reservation_button.setEnabled(True)
+
+    def delete_selected_reservation(self):
+        """Удаляет выбранную бронь."""
+        selected_item = self.reservations_list.currentItem()
+        if selected_item:
+            seating_chart_id = selected_item.data(Qt.UserRole)  # Получаем seating_chart_id из данных элемента
+            restaurant_id = self.get_restaurant_id()
+
+            if not restaurant_id:
+                QMessageBox.warning(self, "Ошибка", "Не удалось получить идентификатор ресторана.")
+                return
+
+            url = f"http://localhost:8000/restaurant/{restaurant_id}/reservations/{seating_chart_id}/"
+            try:
+                response = requests.delete(url, params={"user_email": self.user_email})
+                if response.status_code == 200:
+                    QMessageBox.information(self, "Успех", "Бронь успешно удалена.")
+                    self.load_restaurant_reservations()  # Обновляем список бронирований
+                else:
+                    response_data = response.json()
+                    error_message = response_data.get("detail", "Не удалось удалить бронь.")
+                    QMessageBox.warning(self, "Ошибка", error_message)
+            except requests.exceptions.RequestException as e:
+                QMessageBox.critical(self, "Ошибка", f"Ошибка соединения: {e}")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Выберите бронь для удаления.")

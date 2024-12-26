@@ -788,6 +788,40 @@ async def get_reservations(user_email: str):
         cursor.close()
         conn.close()
 
+@app.delete("/restaurant/{restaurant_id}/reservations/{seating_chart_id}/")
+async def delete_restaurant_reservation(restaurant_id: int, seating_chart_id: int, user_email: str):
+    """Маршрут для удаления бронирования рестораном."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка, что пользователь является владельцем ресторана
+        cursor.execute("""
+            SELECT RESTAURANT_ID FROM restaurants WHERE email = ?
+        """, (user_email,))
+        result = cursor.fetchone()
+        if not result or result[0] != restaurant_id:
+            raise HTTPException(status_code=403, detail="Вы не можете удалить эту бронь")
+
+        # Удаление брони
+        cursor.execute("""
+            DELETE FROM SEATING_CHARTS WHERE SEATING_CHART_ID = ?
+        """, (seating_chart_id,))
+        conn.commit()
+
+        return {"message": "Бронь успешно удалена"}
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except firebirdsql.Error as fb_error:
+        logger.error(f"Ошибка Firebird при удалении брони: {fb_error}")
+        raise HTTPException(status_code=500, detail="Ошибка базы данных при удалении брони")
+    except Exception as e:
+        logger.error(f"Неизвестная ошибка при удалении брони: {e}")
+        raise HTTPException(status_code=500, detail="Произошла ошибка при удалении брони. Пожалуйста, попробуйте позже.")
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.delete("/reservations/{seating_chart_id}/")
 async def delete_reservation(seating_chart_id: int, user_email: str):
     """Маршрут для удаления бронирования пользователем."""
